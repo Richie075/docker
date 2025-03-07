@@ -1,0 +1,174 @@
+# compose.yaml
+services:
+  influxdb2:
+    image: influxdb:2
+    ports:
+      - 8086:8086
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME_FILE: /run/secrets/influxdb2-admin-username
+      DOCKER_INFLUXDB_INIT_PASSWORD_FILE: /run/secrets/influxdb2-admin-password
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influxdb2-admin-token
+      DOCKER_INFLUXDB_INIT_ORG: docs
+      DOCKER_INFLUXDB_INIT_BUCKET: home
+    secrets:
+      - influxdb2-admin-username
+      - influxdb2-admin-password
+      - influxdb2-admin-token
+    volumes:
+      - type: volume
+        source: influxdb2-data
+        target: /var/lib/influxdb2
+      - type: volume
+        source: influxdb2-config
+        target: /etc/influxdb2
+        
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-richie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-0NolonopA0}
+      PGDATA: /data/postgres
+    volumes:
+       - postgres:/data/postgres
+    ports:
+      - "5439:5432"
+    networks:
+      - postgres
+    restart: unless-stopped
+  
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+       - pgadmin:/var/lib/pgadmin
+
+    ports:
+      - "8083:80"
+    networks:
+      - postgres
+    restart: unless-stopped
+
+  node-app:
+    build: .
+    image: node-app
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/node-boilerplate
+    ports:
+      - '8085:8085'
+    depends_on:
+      - mongodb
+    volumes:
+      - .:/src
+    networks:
+      - node-network
+
+  mongodb:
+    image: mongo:6-jammy
+    container_name: mongo
+    ports:
+      - '27017:27017'
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: richie
+      MONGODB_INITDB_ROOT_PASSWORD: 0NolonopA0
+    volumes:
+      - dbdata6:/data/db
+    networks:
+      - node-network
+      - mongodb_network
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH_USERNAME: richie
+      ME_CONFIG_BASICAUTH_PASSWORD: 0NolonopA0
+      #ME_CONFIG_MONGODB_AUTH_DATABASE: admin
+      ME_CONFIG_MONGODB_ADMINUSERNAME: richie
+      ME_CONFIG_MONGODB_ADMINPASSWORD: 0NolonopA0
+      ME_CONFIG_MONGODB_URL: mongo://mongoadmin:mongoadmin@mongo:27017/
+    networks:
+      - mongodb_network
+    depends_on:
+      - mongodb
+  
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    volumes:
+      - clickhouse-storage:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: processdata
+      CLICKHOUSE_USER: richie
+      CLICKHOUSE_PASSWORD: 0NolonopA0
+    ports:
+      - "8002:9000"
+      - "9123:8123"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  ch:
+    build:
+        context: .
+        dockerfile: clickhouse.Dockerfile
+        cache_from:
+            - yandex/clickhouse-server:latest
+    ports:
+        - "8123:8123"
+    volumes:
+        -  ch_db:/var/lib/clickhouse
+    networks:
+        - clickhouse
+    restart: always
+
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client
+    ports:
+        - "8082:80"
+    networks:
+        - clickhouse
+    depends_on:
+        - ch
+    restart: always
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+     - '3000:3000'
+        
+secrets:
+  influxdb2-admin-username:
+    file: /opt/docker/influx/secrets/.env.influxdb2-admin-username
+  influxdb2-admin-password:
+    file: /opt/docker/influx/secrets/.env.influxdb2-admin-password
+  influxdb2-admin-token:
+    file: /opt/docker/influx/secrets/.env.influxdb2-admin-token
+networks:
+  postgres:
+    driver: bridge
+  node-network:
+    driver: bridge
+  clickhouse:
+  mongodb_network:
+    driver: bridge
+volumes:
+  influxdb2-data:
+  influxdb2-config:
+  postgres:
+  pgadmin:
+  dbdata6:
+  clickhouse-storage:
+  ch_db:
