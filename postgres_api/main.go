@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -114,7 +115,7 @@ func selectMoneoThingsWithRawData(ctx context.Context, thingID string) {
 }
 
 func main() {
-	//insertData()
+	insertData()
 	ctx := context.Background()
 	db := connectDB()
 
@@ -198,10 +199,12 @@ func insertData(){
 	}
 	sqlStatement = `INSERT INTO public.rawdata (value) VALUES ('%s')	Returning id`
 
-	if(len(rawDataIds) == 0){
+	//if(len(rawDataIds) == 0){
 	
-	for i := 0; i < 3; i++{
-		insertQuery := fmt.Sprintf(sqlStatement, rawdatas[i].Value)
+	for i := 0; i < 100; i++{
+		var rawdata = new(rawdata)
+		rawdata.Value = strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
+		insertQuery := fmt.Sprintf(sqlStatement, rawdata.Value)
 		err = db.QueryRow(insertQuery).Scan(&id)
      	if err != nil {
         panic(err)
@@ -209,23 +212,22 @@ func insertData(){
     	fmt.Println("New record ID is:", id)
 		rawDataIds = append(rawDataIds, id)
 	}
-	}
+	//}
 
 	sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')	Returning id`
 	id = 0
-	for i := 0; i < 3; i++{
-		insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i], rawDataIds[i], moneothingrawdatas[i].TimeStamp.Format(time.RFC3339))
+	for i := 0; i < 5000000; i++{
+		insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i%3], rand.Int63n(102) + 1, time.Now().Format(time.RFC3339))
 		err = db.QueryRow(insertQuery).Scan(&id)
      	if err != nil {
         panic(err)
     	}
     	fmt.Println("New record ID is:", id)
 	}
-	insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[2], rawDataIds[2], moneothingrawdatas[3].TimeStamp)
-		err = db.QueryRow(insertQuery).Scan(&id)
-     	if err != nil {
-        panic(err)
-    	}
-    	fmt.Println("New record ID is:", id)
 
+}
+
+func randFloat(min, max float64) float64 {
+    res :=  min + rand.Float64() * (max - min)
+    return res
 }
