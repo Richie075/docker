@@ -131,34 +131,39 @@ func main() {
 }
 
 func insertData(db *mongo.Client){
-	collection := db.Database("processdata").Collection("relational")
+	collection := db.Database("processdata").Collection("moneothing")
 
-	for _, v := range moneothings {
-		doc, err := toDoc(v)
-		if err != nil{
-		panic(err)
-	}
-		res, err := collection.InsertOne(context.Background(), doc)
-		if err != nil {
-			panic(err)
-		}
-	
-		fmt.Println("New record ID is:", res.InsertedID)
-	} 
-	
-	cur, err := collection.Find(context.Background(), bson.D{})
+	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
 	if err != nil { log.Fatal(err) }
 	var results = []moneothing{}
-	
+	var moneothingIds []int64
 	
 	defer cur.Close(context.Background())
 	if err = cur.All(context.Background(), &results); err != nil {
-  log.Fatal(err)
-}
-for _, v := range results {
+  		log.Fatal(err)
+	}
+	for _, v := range results {
 		fmt.Println("Found record all:", v.Id, v.ThingId, v.UniqueIdentifier)
+		moneothingIds = append(moneothingIds, v.Id)
 	} 
-	cur, err = collection.Find(context.Background(), bson.D{})
+	if(len(moneothingIds) == 0){
+		for _, v := range moneothings {
+			doc, err := toDoc(v)
+			if err != nil{
+				panic(err)
+			}
+			res, err := collection.InsertOne(context.Background(), doc)
+			if err != nil {
+				panic(err)
+			}
+		
+			fmt.Println("New moneothing record ID is:", res.InsertedID)
+			moneothingIds = append(moneothingIds, v.Id)
+		} 
+	}
+	
+	
+	/*cur, err = collection.Find(context.Background(), bson.D{})
 	if err != nil { log.Fatal(err) }
 	for cur.Next(context.Background()) {
   // To decode into a struct, use cursor.Decode()
@@ -166,84 +171,46 @@ for _, v := range results {
   	err := cur.Decode(result)
   	if err != nil { log.Fatal(err) }
   	fmt.Println("Found record:", result.Id, result.ThingId, result.UniqueIdentifier)
-	}
-	
+	}*/
 
-	/*rows, err := db.Query("SELECT * FROM public.moneothings")
-	if err != nil {
-	panic(err)
-	}
-	var moneothings []moneothing
-	var moneothingIds []int64
-	for rows.Next() {
-		var moneothing moneothing
-		err = rows.Scan(&moneothing.Id, &moneothing.ThingId, &moneothing.UniqueIdentifier, &moneothing.DisplayName)
-		if(err != nil){
-			panic(err)
-		}
-		moneothings = append(moneothings, moneothing)
-		fmt.Println("Thing: %d ThningId: %s, Uniqueidentifier: %s, DisplayName: %s", moneothing.Id, moneothing.ThingId.String(), moneothing.UniqueIdentifier, moneothing.DisplayName)
-		moneothingIds = append(moneothingIds, moneothing.Id)
-	// Process each row
-	}
-
-	rows, err = db.Query("SELECT * FROM public.rawdata")
-	if err != nil {
-	panic(err)
-	}
+	collection = db.Database("processdata").Collection("rawdata")
 	var rawDataIds []int64
-	for rows.Next() {
-		var rawdata rawdata
-		err = rows.Scan(&rawdata.Id, &rawdata.Value)
-		if(err != nil){
+	for i := 0; i < 100; i++{
+		var rawdata = rawdata{
+			Id: int64(i),
+			Value: strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64),
+		}
+		doc, err := toDoc(rawdata)
+		if err != nil {
 			panic(err)
 		}
+		res, err := collection.InsertOne(context.Background(), doc)
+		if err != nil {
+			panic(err)
+		}
+		
+		fmt.Println("New rawdata record ID is:", res.InsertedID)
 		rawDataIds = append(rawDataIds, rawdata.Id)
-	// Process each row
-	}
-
-	sqlStatement := `INSERT INTO public.moneothings (thingid, uniqueidentifier, displayname) VALUES ('%s', '%s', '%s')	Returning id`
-	var id int64
-	
-	if(len(moneothings) == 0){
-	for i := 0; i < 3; i++{
-		insertQuery := fmt.Sprintf(sqlStatement, moneothings[i].ThingId.String(), moneothings[i].UniqueIdentifier, moneothings[i].DisplayName)
-		err = db.QueryRow(insertQuery).Scan(&id)
-     	if err != nil {
-        panic(err)
-    	}
-    	fmt.Println("New record ID is:", id)
-		moneothingIds = append(moneothingIds, id)
-	}
-	}
-	sqlStatement = `INSERT INTO public.rawdata (value) VALUES ('%s')	Returning id`
-
-	//if(len(rawDataIds) == 0){
-	
-	for i := 0; i < 100; i++{
-		var rawdata = new(rawdata)
-		rawdata.Value = strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
-		insertQuery := fmt.Sprintf(sqlStatement, rawdata.Value)
-		err = db.QueryRow(insertQuery).Scan(&id)
-     	if err != nil {
-        panic(err)
-    	}
-    	fmt.Println("New record ID is:", id)
-		rawDataIds = append(rawDataIds, id)
 	}
 	//}
-
-	sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')	Returning id`
-	id = 0
+	
+	collection = db.Database("processdata").Collection("moneothingrawdata")
 	for i := 0; i < 5000000; i++{
-		insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i%3], rand.Int63n(102) + 1, time.Now().Format(time.RFC3339))
-		err = db.QueryRow(insertQuery).Scan(&id)
-     	if err != nil {
-        panic(err)
-    	}
-    	fmt.Println("New record ID is:", id)
+		var moneothingrawdata = moneothingrawdata{
+			Id: int64(i),
+			ThingId: moneothingIds[i%3],
+			RawDataId: rand.Int63n(100),
+			TimeStamp: time.Now(),
+		}
+     	doc, err := toDoc(moneothingrawdata)
+		res, err := collection.InsertOne(context.Background(), doc)
+		if err != nil {
+			panic(err)
+		}
+		
+		fmt.Println("New record ID is:", i, res.InsertedID)
 	}
-*/
+
 }
 
 func randFloat(min, max float64) float64 {
