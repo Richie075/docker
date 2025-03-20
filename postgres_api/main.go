@@ -96,51 +96,59 @@ func getMoneoThings(c *gin.Context) {
 }
 
 func getRawData(c *gin.Context) {
-	/*now := time.Now()
+	db:= connectDB()
+	now := time.Now()
 	log.Println("----> Starting getting rawdata at: ", now)
-	db, err := connectDB()
+	
+	rows, err := db.Query("SELECT * FROM public.rawdata")
+	
 	if err != nil{
 		panic(err)
 	}
+	//moneothings, err := dbmodels.Moneothings().AllG(ctx)
 
-	collection := db.Database("processdata").Collection("rawdata")
-
-	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
-	var results = []rawdata{}
-	
-	defer cur.Close(context.Background())
-	if err = cur.All(context.Background(), &results); err != nil {
-  		log.Fatal(err)
+	var rawdatas []rawdata
+	for rows.Next() {
+		var rawdata rawdata
+		err = rows.Scan(&rawdata.Id, &rawdata.Value)
+		if(err != nil){
+			panic(err)
+		}
+		rawdatas = append(rawdatas, rawdata)
 	}
-    c.IndentedJSON(http.StatusOK, results)
+    c.IndentedJSON(http.StatusOK, rawdatas)
 	//db.Disconnect()
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting rawdata at: ", after, dur)*/
+	log.Println("----> Finished getting rawdatas data at: ", after, dur)
 }
 
 func getMoneoThingRawData(c *gin.Context) {
-	/*now := time.Now()
+		db:= connectDB()
+	now := time.Now()
 	log.Println("----> Starting getting moneothingrawdata at: ", now)
-	db, err := connectDB()
+	
+	rows, err := db.Query("SELECT * FROM public.moneothingrawdata")
+	
 	if err != nil{
 		panic(err)
 	}
+	//moneothings, err := dbmodels.Moneothings().AllG(ctx)
 
-	collection := db.Database("processdata").Collection("moneothingrawdata")
-
-	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
-	var results = []moneothingrawdata{}
-	
-	defer cur.Close(context.Background())
-	if err = cur.All(context.Background(), &results); err != nil {
-  		log.Fatal(err)
+	var moneothingrawdatas []moneothingrawdata
+	for rows.Next() {
+		var moneothingrawdata moneothingrawdata
+		err = rows.Scan(&moneothingrawdata.Id, &moneothingrawdata.ThingId, &moneothingrawdata.RawDataId, moneothingrawdata.TimeStamp)
+		if(err != nil){
+			panic(err)
+		}
+		moneothingrawdatas = append(moneothingrawdatas, moneothingrawdata)
 	}
-    c.IndentedJSON(http.StatusOK, results)
+    c.IndentedJSON(http.StatusOK, moneothingrawdatas)
 	//db.Disconnect()
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting rawdata at: ", after, dur)*/
+	log.Println("----> Finished getting moneothingrawdatas data at: ", after, dur)
 }
 
 func getMoneoThingByID(c *gin.Context) {
@@ -151,7 +159,7 @@ func getMoneoThingByID(c *gin.Context) {
     now := time.Now()
 	log.Println("----> Starting getting moneothings by id at: ", now)
 	db:= connectDB()
-	sqlStatement := fmt.Sprintf("SELECT * FROM public.moneothing WHERE id = '%d'", id)
+	sqlStatement := fmt.Sprintf("SELECT * FROM public.moneothing m INNER JOIN public.moneothingrawdata mr ON mr.thingid = m.id WHERE m.id = '%d'", id)
 	rows, err := db.Query(sqlStatement)
 	
 	if err != nil{
@@ -159,12 +167,20 @@ func getMoneoThingByID(c *gin.Context) {
 	}
 	//moneothings, err := dbmodels.Moneothings().AllG(ctx)
 
-	var moneothing moneothing
+	var tempthing moneothing
+	var moneothing *moneothing
+	
+	var moneothingrawdata moneothingrawdata
 	for rows.Next() {
-		err = rows.Scan(&moneothing.Id, &moneothing.ThingId, &moneothing.UniqueIdentifier, &moneothing.DisplayName)
+		err = rows.Scan(&tempthing.Id, &tempthing.ThingId, &tempthing.UniqueIdentifier, &tempthing.DisplayName, &moneothingrawdata.ThingId, &moneothingrawdata.RawDataId, &moneothingrawdata.TimeStamp, &moneothingrawdata.Id,)
 		if(err != nil){
 			panic(err)
 		}
+		if moneothing == nil{
+			moneothing = &tempthing
+		}
+		moneothing.Data = append(moneothing.Data, moneothingrawdata)
+	
 		fmt.Println("Thing: %d ThningId: %s, Uniqueidentifier: %s, DisplayName: %s", moneothing.Id, moneothing.ThingId.String(), moneothing.UniqueIdentifier, moneothing.DisplayName)
 		
 	}
@@ -289,8 +305,8 @@ func main() {
 
 	router := gin.Default()
     router.GET("/moneothings", getMoneoThings)
-	router.GET("/rawdata", getRawData)
-	router.GET("/moneothingrawdata", getMoneoThingRawData)
+	router.GET("/rawdatas", getRawData)
+	router.GET("/moneothingrawdatas", getMoneoThingRawData)
 	router.GET("/moneothing/:id", getMoneoThingByID)
 	router.GET("/rawdata/:value", getRawDataByValue)
 	router.GET("/moneothingrawdata/:timestamp", getMoneoThingRawDataByTimeStamp)
