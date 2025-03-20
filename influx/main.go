@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
@@ -21,6 +22,11 @@ func main() {
 bucket := "processdata"
 thingId := uuid.New()
 unique := "Temperature"
+	f, err := os.OpenFile("logfile.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	now := time.Now()
+	log.SetOutput(f)
+
+	log.Println("----> Starting insertion of data at: ", now)
 writeAPI := client.WriteAPIBlocking(org, bucket)
 for value := 0; value < 5000000; value++ {
 	temperature := randFloats(-10.0, 35.0, 1 )
@@ -32,12 +38,15 @@ for value := 0; value < 5000000; value++ {
 		"value": temperature[0],
 	}
 	point := write.NewPoint("measurement", tags, fields, time.Now())
-	time.Sleep(1 * time.Second) // separate points by 1 second
+	//time.Sleep(1 * time.Second) // separate points by 1 second
 
 	if err := writeAPI.WritePoint(context.Background(), point); err != nil {
 		log.Fatal(err)
 	}
 	}
+		after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished inserting data at: ", after, dur)
 	queryAPI := client.QueryAPI(org)
 query := `from(bucket: "processdata")
             |> range(start: -10m)

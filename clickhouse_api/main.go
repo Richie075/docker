@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -152,10 +154,15 @@ func main() {
 }
 
 func insertData(db driver.Conn, ctx context.Context){
-	rows, err := db.Query(ctx, "SELECT * FROM processdata.moneothings")
+	f, err := os.OpenFile("logfile.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	now := time.Now()
+	rows, err := db.Query(ctx, "SELECT * FROM processdata.moneothing")
 	if err != nil {
 	panic(err)
 	}
+	log.SetOutput(f)
+
+	log.Println("----> Starting insertion of data at: ", now)
 	var moneothings []moneothing
 	var moneothingIds []int64
 	for rows.Next() {
@@ -185,7 +192,7 @@ func insertData(db driver.Conn, ctx context.Context){
 	// Process each row
 	}
 
-	sqlStatement := `INSERT INTO processdata.moneothings (id, thingid, uniqueidentifier, displayname) VALUES ('%d','%s', '%s', '%s')`
+	sqlStatement := `INSERT INTO processdata.moneothing (id, thingid, uniqueidentifier, displayname) VALUES ('%d','%s', '%s', '%s')`
 
 	
 	if(len(moneothings) == 0){
@@ -215,7 +222,9 @@ func insertData(db driver.Conn, ctx context.Context){
 		db.QueryRow(ctx, insertQuery)
     	fmt.Println("New record ID is:", i)
 	}
-
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished inserting data at: ", after, dur)
 }
 
 func randFloat(min, max float64) float64 {

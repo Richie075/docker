@@ -58,3 +58,6 @@ TABLESPACE pg_default;
 
 ALTER TABLE IF EXISTS public.rawdata
     OWNER to richie;
+
+    	ALTER SEQUENCE public.moneothing_id_seq RESTART WITH 1
+	ALTER SEQUENCE public.rawdata_id_seq RESTART WITH 1
