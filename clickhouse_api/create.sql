@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS moneothing
+CREATE TABLE IF NOT EXISTS processdata.moneothing
 (
     id Int64,
     thingid UUID,
@@ -9,7 +9,7 @@ ENGINE = MergeTree()
 ORDER BY (thingid, uniqueidentifier)
 
 
-CREATE TABLE IF NOT EXISTS rawdata
+CREATE TABLE IF NOT EXISTS processdata.rawdata
 (
     id Int64,
     value String
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS rawdata
 ENGINE = MergeTree()
 ORDER BY value
 
-CREATE TABLE IF NOT EXISTS moneothingrawdata
+CREATE TABLE IF NOT EXISTS processdata.moneothingrawdata
 (
     id Int64,
     thingid Int64,
