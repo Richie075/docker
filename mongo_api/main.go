@@ -64,6 +64,11 @@ type timestampsearchdto struct{
 	Lower bool `json:"lower"`
 }
 
+type moneothingsearchdto struct{
+	ThingId uuid.UUID `json:"thingid"`
+	UniqueIdentifier string  `json:"uniqueidentifier"`
+}
+
 var moneothings = []moneothing{
 	{Id: 1, ThingId: uuid.New(), UniqueIdentifier: "Unique1", DisplayName: "Temperature1"},
 	{Id: 2, ThingId: uuid.New(), UniqueIdentifier: "Unique2", DisplayName: "Temperature2"},
@@ -247,6 +252,37 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 
 func getMoneoThingWithTimestamp(c *gin.Context){}
 
+func getMoneoThingByThingAndUnique(c *gin.Context){
+	var body moneothingsearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    now := time.Now()
+	log.Println("----> Starting getting getMoneoThingWithValue by value at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("moneothing")
+
+	regexunique := fmt.Sprintf("/%s*/", body.UniqueIdentifier) 
+	cur, err := collection.Find(context.TODO(), bson.M{"thingid": body.ThingId, "uniquidentifier": bson.M{"$regex": regexunique, "$options": ""}}, &options.FindOptions{})
+	var results = []moneothingwithvalue{}
+	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}	
+
+    c.IndentedJSON(http.StatusOK, results)
+
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting getMoneoThingWithValue by value data at: ", after, dur)
+
+}
 func getMoneoThingWithValue(c *gin.Context){
 	var body valuesearchdto
 	if err := c.BindJSON(&body); err != nil{
@@ -261,12 +297,16 @@ func getMoneoThingWithValue(c *gin.Context){
 
 	collection := db.Database("processdata").Collection("moneothingwithvalue")
 
-	var result = moneothingwithvalue{}
+	regex := fmt.Sprintf("/%s*/", body.Value) 
+	cur, err := collection.Find(context.TODO(), bson.M{"value": bson.M{"$regex": regex, "$options": ""}}, &options.FindOptions{})
+	var results = []moneothingwithvalue{}
 	
-	collection.FindOne(context.TODO(), bson.M{"value": body.Value}).Decode(&result)
-	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}	
 
-    c.IndentedJSON(http.StatusOK, result)
+    c.IndentedJSON(http.StatusOK, results)
 
 	//db.Disconnect()
 	after := time.Now()
@@ -310,7 +350,8 @@ func main() {
 	router.GET("/moneothing/:id", getMoneoThingByID)
 	router.GET("/rawdata/:value", getRawDataByValue)
 	router.GET("/moneothingrawdata/:timestamp", getMoneoThingRawDataByTimeStamp)
-	router.POST("/moneothingwithvalue/", getMoneoThingWithValue)
+	router.POST("/moneothingwithvalue", getMoneoThingWithValue)
+	router.POST("/moneothing", getMoneoThingByThingAndUnique)
     router.Run("localhost:4242")
 }
 
