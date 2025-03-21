@@ -58,7 +58,27 @@ var moneothingrawdatas = []moneothingrawdata{
 }
 
 func getMoneoThings(c *gin.Context) {
-    c.IndentedJSON(http.StatusOK, moneothingsDefault)
+	now := time.Now()
+	log.Println("----> Starting getting moneothings at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("moneothing")
+
+	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	var results = []moneothing{}
+	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}
+    c.IndentedJSON(http.StatusOK, results)
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting moneothings data at: ", after, dur)
 }
 
 func postMoneoThings(c *gin.Context) {
@@ -90,6 +110,153 @@ func getMoneoThingByID(c *gin.Context) {
     }
     c.IndentedJSON(http.StatusNotFound, gin.H{"message": "moneothing not found"})
 }
+func getRawData(c *gin.Context) {
+	now := time.Now()
+	log.Println("----> Starting getting rawdata at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("rawdata")
+
+	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	var results = []rawdata{}
+	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}
+    c.IndentedJSON(http.StatusOK, results)
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting rawdata at: ", after, dur)
+}
+
+func getMoneoThingRawData(c *gin.Context) {
+	now := time.Now()
+	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("moneothingrawdata")
+
+	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	var results = []moneothingrawdata{}
+	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}
+    c.IndentedJSON(http.StatusOK, results)
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting rawdata at: ", after, dur)
+}
+
+func getMoneoThingByID(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+    now := time.Now()
+	log.Println("----> Starting getting moneothings by id at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("moneothing")
+
+	var result = moneothing{}
+	
+	collection.FindOne(context.TODO(), bson.M{"id": id}).Decode(&result)
+	
+	var data = []moneothingrawdata{}
+	collection = db.Database("processdata").Collection("moneothingrawdata")
+	batchSize := int32(100)
+	cur, err := collection.Find(context.Background(), bson.M{"thingid": result.Id}, &options.FindOptions{BatchSize: &batchSize})
+	if err != nil { log.Fatal(err) }
+	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &data); err != nil {
+  		log.Fatal(err)
+	}
+	result.Data = data
+    c.IndentedJSON(http.StatusOK, result)
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting moneothing by id data at: ", after, dur)
+}
+
+func getRawDataByValue(c *gin.Context) {
+	value := c.Param("value")
+    now := time.Now()
+	log.Println("----> Starting getting rawdata by value at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("rawdata")
+
+	var result = rawdata{}
+	
+	collection.FindOne(context.TODO(), bson.M{"value": value}).Decode(&result)
+	
+    c.IndentedJSON(http.StatusOK, result)
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
+}
+
+func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
+	layout := "2006-01-02T15:04:05.000Z"
+	str := c.Param("timestamp")
+	timestamp, err := time.Parse(layout, str)
+    now := time.Now()
+	log.Println("----> Starting getting rawdata by value at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("moneothingrawdata")
+
+	var result = moneothingrawdata{}
+	
+	collection.FindOne(context.TODO(), bson.M{"timestamp": timestamp}).Decode(&result)
+	
+	var thing = moneothing{}
+	collection = db.Database("processdata").Collection("moneothing")
+	collection.FindOne(context.TODO(), bson.M{"thinidgid": result.ThingId}).Decode(&thing)
+
+	result.MoneoThing = thing
+	var rawdata = rawdata{}
+	collection = db.Database("processdata").Collection("rawdata")
+	collection.FindOne(context.TODO(), bson.M{"id": result.RawDataId},).Decode(&rawdata)
+	
+	result.Rawdata = rawdata
+    c.IndentedJSON(http.StatusOK, result)
+
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
+}
+func getMoneoThinWithValueAndTimestamp(c *gin.Context)
+{}
+
+func getMoneoThinWithTimestamp(c *gin.Context)
+{}
+
+func getMoneoThinWithValue(c *gin.Context)
+{}
+func getMoneoThinWithValueAndTimestamp(c *gin.Context)
+{}
 
 func connectDB() (driver.Conn, error) {
 	var (
@@ -148,9 +315,12 @@ func main() {
 
 	router := gin.Default()
     router.GET("/moneothings", getMoneoThings)
-	 router.GET("/albums/:id", getMoneoThingByID)
-	router.POST("/albums", postMoneoThings)
-    router.Run("localhost:4242")
+	router.GET("/rawdata", getRawData)
+	router.GET("/moneothingrawdata", getMoneoThingRawData)
+	router.GET("/moneothing/:id", getMoneoThingByID)
+	router.GET("/rawdata/:value", getRawDataByValue)
+	router.GET("/moneothingrawdata/:timestamp", getMoneoThingRawDataByTimeStamp)
+    router.Run("localhost:4243")
 }
 
 func insertData(db driver.Conn, ctx context.Context){

@@ -43,6 +43,27 @@ type moneothingrawdata struct{
 	MoneoThing moneothing `json:"moneothing"`
 }
 
+type moneothingwithvalue struct{
+	ThingId uuid.UUID `json:"thingid"`
+	UniqueIdentifier string  `json:"uniqueidentifier"`
+	DisplayName string `json:"displayname"`
+	Value string `json:"value"`
+}
+
+type valuesearchdto struct{
+	Value string `json:"value"`
+}
+
+type timestamprangesearchdto struct{
+	From time.Time `json:"from"`
+	To time.Time `json:"to"`
+}
+
+type timestampsearchdto struct{
+	Time time.Time `json:"time"`
+	Lower bool `json:"lower"`
+}
+
 var moneothings = []moneothing{
 	{Id: 1, ThingId: uuid.New(), UniqueIdentifier: "Unique1", DisplayName: "Temperature1"},
 	{Id: 2, ThingId: uuid.New(), UniqueIdentifier: "Unique2", DisplayName: "Temperature2"},
@@ -224,6 +245,37 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
 }
 
+func getMoneoThingWithTimestamp(c *gin.Context){}
+
+func getMoneoThingWithValue(c *gin.Context){
+	var body valuesearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    now := time.Now()
+	log.Println("----> Starting getting getMoneoThingWithValue by value at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+
+	collection := db.Database("processdata").Collection("moneothingwithvalue")
+
+	var result = moneothingwithvalue{}
+	
+	collection.FindOne(context.TODO(), bson.M{"value": body.Value}).Decode(&result)
+	
+
+    c.IndentedJSON(http.StatusOK, result)
+
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting getMoneoThingWithValue by value data at: ", after, dur)
+
+}
+func getMoneoThingWithValueAndTimestamp(c *gin.Context){}
+
 func connectDB() (*mongo.Client, error){
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 defer cancel()
@@ -258,6 +310,7 @@ func main() {
 	router.GET("/moneothing/:id", getMoneoThingByID)
 	router.GET("/rawdata/:value", getRawDataByValue)
 	router.GET("/moneothingrawdata/:timestamp", getMoneoThingRawDataByTimeStamp)
+	router.POST("/moneothingwithvalue/", getMoneoThingWithValue)
     router.Run("localhost:4242")
 }
 
