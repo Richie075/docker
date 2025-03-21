@@ -180,9 +180,6 @@ func getMoneoThingByID(c *gin.Context) {
 			moneothing = &tempthing
 		}
 		moneothing.Data = append(moneothing.Data, moneothingrawdata)
-	
-		fmt.Println("Thing: %d ThningId: %s, Uniqueidentifier: %s, DisplayName: %s", moneothing.Id, moneothing.ThingId.String(), moneothing.UniqueIdentifier, moneothing.DisplayName)
-		
 	}
     c.IndentedJSON(http.StatusOK, moneothing)
 	//db.Disconnect()
@@ -288,7 +285,7 @@ func main() {
 	boil.SetDB(db)
 
 	//selectMoneoThingsWithRawData(ctx, "380035ab-9190-4c75-a251-fbeb53dc0cb5")
-	//insertData()
+	insertData()
 	//ctx := context.Background()
 	/*db := connectDB()
 
@@ -398,20 +395,22 @@ func insertData(){
 
 	sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')`
 	id = 0
-	db.Close()
+	
+
 	for i := 0; i < 5000000; i++{
-		db, err := sql.Open("postgres", "postgres://richie:0NolonopA0@192.168.66.11:5439/processdata?sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
+
 		insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i%3], rand.Int63n(100) + 1, time.Now().Format(time.RFC3339))
-		db.QueryRow(insertQuery)
+		query, err := db.Query(insertQuery)
+		if err != nil{
+			panic(err)
+		}
     	fmt.Println("Inserted:", i)
-		db.Close()
-	}
+		query.Close()
+		}
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Println("----> Finished inserting data at: ", after, dur)
+	db.Close()
 }
 
 func randFloat(min, max float64) float64 {
