@@ -44,3 +44,7 @@ postgres_api/models/boil_table_names.go
 postgres_api/models/moneothingrawdata.go
 postgres_api/models/moneothings.go
 postgres_api/models/rawdata.go
+postgres_api/models/boil_table_names.go
+postgres_api/models/moneothingrawdata.go
+postgres_api/models/moneothings.go
+postgres_api/models/rawdata.go

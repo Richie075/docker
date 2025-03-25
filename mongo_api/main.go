@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -48,25 +49,34 @@ type moneothingwithvalue struct{
 	UniqueIdentifier string  `json:"uniqueidentifier"`
 	DisplayName string `json:"displayname"`
 	Value string `json:"value"`
+	TimeStamp time.Time `json:"timestamp"`
 }
 
 type valuesearchdto struct{
 	Value string `json:"value"`
+	PageNumber int `json:"pagenumber"`
+	PageSize int `json:"pagesize"`
 }
 
 type timestamprangesearchdto struct{
 	From time.Time `json:"from"`
 	To time.Time `json:"to"`
+	PageNumber int `json:"pagenumber"`
+	PageSize int `json:"pagesize"`
 }
 
 type timestampsearchdto struct{
 	Time time.Time `json:"time"`
 	Lower bool `json:"lower"`
+	PageNumber int `json:"pagenumber"`
+	PageSize int `json:"pagesize"`
 }
 
 type moneothingsearchdto struct{
 	ThingId uuid.UUID `json:"thingid"`
 	UniqueIdentifier string  `json:"uniqueidentifier"`
+	PageNumber int `json:"pagenumber"`
+	PageSize int `json:"pagesize"`
 }
 
 var moneothings = []moneothing{
@@ -98,7 +108,7 @@ func getMoneoThings(c *gin.Context) {
 
 	collection := db.Database("processdata").Collection("moneothing")
 
-	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	cur, err := collection.Find(context.Background(), bson.D{})
 	var results = []moneothing{}
 	
 	defer cur.Close(context.Background())
@@ -122,7 +132,7 @@ func getRawData(c *gin.Context) {
 
 	collection := db.Database("processdata").Collection("rawdata")
 
-	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	cur, err := collection.Find(context.Background(), bson.D{})
 	var results = []rawdata{}
 	
 	defer cur.Close(context.Background())
@@ -146,7 +156,7 @@ func getMoneoThingRawData(c *gin.Context) {
 
 	collection := db.Database("processdata").Collection("moneothingrawdata")
 
-	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	cur, err := collection.Find(context.Background(), bson.D{})
 	var results = []moneothingrawdata{}
 	
 	defer cur.Close(context.Background())
@@ -177,8 +187,7 @@ func getMoneoThingByID(c *gin.Context) {
 	
 	var data = []moneothingrawdata{}
 	collection = db.Database("processdata").Collection("moneothingrawdata")
-	batchSize := int32(100)
-	cur, err := collection.Find(context.Background(), bson.M{"thingid": result.Id}, &options.FindOptions{BatchSize: &batchSize})
+	cur, err := collection.Find(context.Background(), bson.M{"thingid": result.Id})
 	if err != nil { log.Fatal(err) }
 	
 	defer cur.Close(context.Background())
@@ -215,10 +224,11 @@ func getRawDataByValue(c *gin.Context) {
 	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
 }
 
-func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
-	layout := "2006-01-02T15:04:05.000Z"
-	str := c.Param("timestamp")
-	timestamp, err := time.Parse(layout, str)
+func getMoneoThingRawDataByTimeStampRange(c *gin.Context) {
+	var body timestamprangesearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
     now := time.Now()
 	log.Println("----> Starting getting rawdata by value at: ", now)
 	db, err := connectDB()
@@ -226,22 +236,34 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 		panic(err)
 	}
 
-	collection := db.Database("processdata").Collection("moneothingrawdata")
+	collection := db.Database("processdata").Collection("moneothingrawdataextended")
 
-	var result = moneothingrawdata{}
-	
-	collection.FindOne(context.TODO(), bson.M{"timestamp": timestamp}).Decode(&result)
-	
-	var thing = moneothing{}
-	collection = db.Database("processdata").Collection("moneothing")
-	collection.FindOne(context.TODO(), bson.M{"thinidgid": result.ThingId}).Decode(&thing)
+	 pageOptions := options.Find()
+ 	pageOptions.SetSkip(int64(body.PageNumber)) //0-i
+ 	pageOptions.SetLimit(int64(body.PageSize))
+	const (
+        layoutISO = "2006-01-02T15:04:05.111Z"
+    )
+	/*from,err := time.Parse(layoutISO, "2025-03-19T14:10:12.686+00:00")
+	if err != nil{
+		panic(err)
+	}
+	to,_ := time.Parse(layoutISO, body.To.Local().String())*/
 
-	result.MoneoThing = thing
-	var rawdata = rawdata{}
-	collection = db.Database("processdata").Collection("rawdata")
-	collection.FindOne(context.TODO(), bson.M{"id": result.RawDataId},).Decode(&rawdata)
+	from := primitive.NewDateTimeFromTime(body.From)
+	//from := primitive.NewDateTimeFromTime(time.Now().AddDate(0,0,-6))
+	//to := primitive.NewDateTimeFromTime(body.To)
+	//filter := bson.M{"timestamp": bson.M{"$gt": from, "$lt": to}}
+	//filter := bson.M{"timestamp": bson.M{"$gt": from}}
+	filter := bson.M{"timestamp": bson.M{"$gte": from}}
+	var result = moneothingwithvalue{}
 	
-	result.Rawdata = rawdata
+	cur, err := collection.Find(context.TODO(), filter, pageOptions)
+	var results = []moneothingwithvalue{}
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}
+	
     c.IndentedJSON(http.StatusOK, result)
 
 	//db.Disconnect()
@@ -249,6 +271,8 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	dur := after.Sub(now)
 	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
 }
+
+//func NewDateTimeFromTime(t time.Time) DateTime
 
 func getMoneoThingWithTimestamp(c *gin.Context){}
 
@@ -258,22 +282,30 @@ func getMoneoThingByThingAndUnique(c *gin.Context){
 		log.Println(err)
 	}
     now := time.Now()
-	log.Println("----> Starting getting getMoneoThingWithValue by value at: ", now)
+	log.Println("----> Starting getting getMoneoThingWithValue by thing at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
 	}
 
-	collection := db.Database("processdata").Collection("moneothing")
+	  pageOptions := options.Find()
+ pageOptions.SetSkip(int64(body.PageNumber)) //0-i
+ pageOptions.SetLimit(int64(body.PageSize))
 
-	regexunique := fmt.Sprintf("/%s*/", body.UniqueIdentifier) 
-	cur, err := collection.Find(context.TODO(), bson.M{"thingid": body.ThingId, "uniquidentifier": bson.M{"$regex": regexunique, "$options": ""}}, &options.FindOptions{})
+	regex := fmt.Sprintf("^%s", body.UniqueIdentifier)
+	collection := db.Database("processdata").Collection("moneothingwithrawdataextended")
+	filter := bson.D{{"uniqueidentifier", bson.Regex{Pattern: regex, Options: "i"}}, {"thingid", body.ThingId}}
+
+	//regexunique := fmt.Sprintf("/%s*/", body.UniqueIdentifier) 
+	cur, err := collection.Find(context.TODO(), filter, pageOptions)
 	var results = []moneothingwithvalue{}
-	
-	defer cur.Close(context.Background())
 	if err = cur.All(context.Background(), &results); err != nil {
   		log.Fatal(err)
-	}	
+	}
+	
+	
+	defer cur.Close(context.Background())
+		
 
     c.IndentedJSON(http.StatusOK, results)
 
@@ -288,23 +320,31 @@ func getMoneoThingWithValue(c *gin.Context){
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
-    now := time.Now()
-	log.Println("----> Starting getting getMoneoThingWithValue by value at: ", now)
+     now := time.Now()
+	log.Println("----> Starting getting getMoneoThingWithValue by thing at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
 	}
 
-	collection := db.Database("processdata").Collection("moneothingwithvalue")
+	  pageOptions := options.Find()
+ pageOptions.SetSkip(int64(body.PageNumber)) //0-i
+ pageOptions.SetLimit(int64(body.PageSize))
 
-	regex := fmt.Sprintf("/%s*/", body.Value) 
-	cur, err := collection.Find(context.TODO(), bson.M{"value": bson.M{"$regex": regex, "$options": ""}}, &options.FindOptions{})
+	regex := fmt.Sprintf("^%s", body.Value)
+	collection := db.Database("processdata").Collection("moneothingwithrawdataextended")
+	filter := bson.D{{"value", bson.Regex{Pattern: regex, Options: "i"}}}
+
+	//regexunique := fmt.Sprintf("/%s*/", body.UniqueIdentifier) 
+	cur, err := collection.Find(context.TODO(), filter, pageOptions)
 	var results = []moneothingwithvalue{}
-	
-	defer cur.Close(context.Background())
 	if err = cur.All(context.Background(), &results); err != nil {
   		log.Fatal(err)
-	}	
+	}
+	
+	
+	defer cur.Close(context.Background())
+		
 
     c.IndentedJSON(http.StatusOK, results)
 
@@ -317,16 +357,20 @@ func getMoneoThingWithValue(c *gin.Context){
 func getMoneoThingWithValueAndTimestamp(c *gin.Context){}
 
 func connectDB() (*mongo.Client, error){
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-defer cancel()
+
 //SetAuth(options.Credential{Username: "richie", Password: "0NolonopA0"}).
-client, err := mongo.Connect( ctx, options.Client().ApplyURI("mongodb://192.168.66.11:27017"))
+client, err := mongo.Connect(options.Client().ApplyURI("mongodb://192.168.66.11:27017"))
 if err != nil { return nil,err }
 return client, err
 }
 
 func main() {
+	f, err := os.OpenFile("logfile.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+    	log.Fatalf("error opening file: %v", err)
+	}
 	
+	log.SetOutput(f)
 	/*db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -349,26 +393,18 @@ func main() {
 	router.GET("/moneothingrawdata", getMoneoThingRawData)
 	router.GET("/moneothing/:id", getMoneoThingByID)
 	router.GET("/rawdata/:value", getRawDataByValue)
-	router.GET("/moneothingrawdata/:timestamp", getMoneoThingRawDataByTimeStamp)
-	router.POST("/moneothingwithvalue", getMoneoThingWithValue)
-	router.POST("/moneothing", getMoneoThingByThingAndUnique)
+	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStampRange)
+	router.POST("/moneothingrawdata/value", getMoneoThingWithValue)
+	router.POST("/moneothingrawdata/thing", getMoneoThingByThingAndUnique)
     router.Run("localhost:4242")
 }
 
-func insertData(db *mongo.Client){
-	f, err := os.OpenFile("logfile.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+func insertData(db *mongo.Client){	
 	now := time.Now()
-	
-	if err != nil {
-    	log.Fatalf("error opening file: %v", err)
-	}
-	
-	log.SetOutput(f)
-
 	log.Println("----> Starting insertion of data at: ", now)
 	collection := db.Database("processdata").Collection("moneothing")
 
-	cur, err := collection.Find(context.Background(), bson.D{}, &options.FindOptions{})
+	cur, err := collection.Find(context.Background(), bson.D{})
 	if err != nil { log.Fatal(err) }
 	var results = []moneothing{}
 	var moneothingIds []int64

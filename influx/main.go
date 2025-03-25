@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-  token := "doicCBo60G0l9OazXXQs-7iVTaO5fuvU1GFuzwFbLkHHWvjL4HDi8mgfx7wr8TBqkxwOnZMk2M6NCCQ6r3Hz_Q=="//os.Getenv("INFLUXDB_TOKEN")
+  token := "yoU2J_RrfHsgDHEEJghi7kdSX8rkmJBU3sRY1bXnmmFIewYGwhS4TGq9kGjHEyuiW6Wj3S8oY-rODPDtnoQOeA=="//os.Getenv("INFLUXDB_TOKEN")
   url := "http://192.168.66.11:8086"
   client := influxdb2.NewClient(url, token)
   org := "docs"
