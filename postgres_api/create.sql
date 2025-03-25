@@ -61,3 +61,9 @@ ALTER TABLE IF EXISTS public.rawdata
 
     	ALTER SEQUENCE public.moneothing_id_seq RESTART WITH 1
 	ALTER SEQUENCE public.rawdata_id_seq RESTART WITH 1
+
+    CREATE VIEW moneothingwithrawdata AS
+    SELECT m.thingid, m.uniqueidentifier, m.displayname, r.value, mr.timestamp
+        FROM moneothingrawdata AS mr
+		INNER JOIN moneothing AS m ON m.id = mr.thingid
+		INNER JOIN rawdata AS r ON r.id = mr.rawdataid

@@ -96,7 +96,7 @@ type moneothingsearchdto struct{
 }
 func getMoneoThings(c *gin.Context) {
 	now := time.Now()
-	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	log.Println("----> Starting getMoneoThings at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -120,7 +120,7 @@ func getMoneoThings(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothings)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting moneothings at: ", after, dur)
+	log.Println("----> Finished getMoneoThings at: ", after, dur)
 }
 
 func postMoneoThings(c *gin.Context) {
@@ -143,7 +143,7 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 		log.Println(err)
 	}
     	now := time.Now()
-	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	log.Println("----> Starting getMoneoThingByIdAndUnique at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -171,7 +171,7 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting moneothings at: ", after, dur)
+	log.Println("----> Finished getMoneoThingByIdAndUnique at: ", after, dur)
 }
 
 func getMoneoThingByValue(c *gin.Context) {
@@ -180,7 +180,7 @@ func getMoneoThingByValue(c *gin.Context) {
 		log.Println(err)
 	}
     	now := time.Now()
-	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	log.Println("----> Starting getMoneoThingByValue at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -209,7 +209,7 @@ func getMoneoThingByValue(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting moneothings at: ", after, dur)
+	log.Println("----> Finished getMoneoThingByValue at: ", after, dur)
 }
 
 func getRawDataByValue(c *gin.Context) {
@@ -218,7 +218,7 @@ func getRawDataByValue(c *gin.Context) {
 		log.Println(err)
 	}
     	now := time.Now()
-	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	log.Println("----> Starting getRawDataByValue at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -248,7 +248,7 @@ func getRawDataByValue(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, rawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting rawdata at: ", after, dur)
+	log.Println("----> Finished getRawDataByValue at: ", after, dur)
 }
 
 
@@ -258,7 +258,7 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 		log.Println(err)
 	}
     	now := time.Now()
-	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	log.Println("----> Starting getMoneoThingRawDataByTimeStamp at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -292,7 +292,7 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting moneothings at: ", after, dur)
+	log.Println("----> Finished getMoneoThingRawDataByTimeStamp at: ", after, dur)
 }
 
 func getMoneoThingRawDataByTimeRange(c *gin.Context) {
@@ -301,7 +301,7 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 		log.Println(err)
 	}
     	now := time.Now()
-	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	log.Println("----> Starting getMoneoThingRawDataByTimeRange at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -330,7 +330,7 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getting moneothings at: ", after, dur)
+	log.Println("----> Finished getMoneoThingRawDataByTimeRange at: ", after, dur)
 }
 
 func connectDB() (driver.Conn, error) {
@@ -383,7 +383,7 @@ func main() {
 	panic(err)
 	}
 	log.SetOutput(f)
-	//insertData()
+	insertData()
 	//db, err := connectDB()
 	//if err != nil {
 	//panic(err)
@@ -395,7 +395,7 @@ func main() {
 
 	router := gin.Default()
     router.GET("/moneothings", getMoneoThings)
-	router.POST("/rawdata", getRawDataByValue)
+	router.POST("/rawdatas", getRawDataByValue)
 	router.POST("/moneothingrawdata/thing", getMoneoThingByIdAndUnique)
 	router.POST("/moneothingrawdata/value", getMoneoThingByValue)
 	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStamp)
