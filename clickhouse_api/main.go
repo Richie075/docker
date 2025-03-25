@@ -212,15 +212,23 @@ func getMoneoThingByValue(c *gin.Context) {
 	log.Println("----> Finished getting moneothings at: ", after, dur)
 }
 
-func getRawDatas(c *gin.Context) {
-	now := time.Now()
-	log.Println("----> Starting getting rawdata at: ", now)
+func getRawDataByValue(c *gin.Context) {
+	var body valuesearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    	now := time.Now()
+	log.Println("----> Starting getting moneothingrawdata at: ", now)
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
 	}
+	if err != nil{
+		panic(err)
+	}
 
-	rows, err := db.Query(context.Background(),"SELECT * FROM processdata.rawdata")
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.rawdata WHERE value = '%s' ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.Value, body.PageNumber * body.PageSize, body.PageSize)
+	rows, err := db.Query(context.Background(),sqlstatement)
 	if err != nil {
 	panic(err)
 	}
@@ -243,22 +251,87 @@ func getRawDatas(c *gin.Context) {
 	log.Println("----> Finished getting rawdata at: ", after, dur)
 }
 
-func getMoneoThingRawData(c *gin.Context) {
-	
-}
-
-func getRawDataByValue(c *gin.Context) {
-	
-}
 
 func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
+	var body timestampsearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    	now := time.Now()
+	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+	
 
+	var moneothingrawdatas []moneothingwithvalue
+	var operator string 
+	if body.Lower{
+		operator = `<=`
+	}else{
+		operator = `>=`
+	}
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE timestamp %s parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, operator, body.Time,body.PageNumber * body.PageSize, body.PageSize)
+	rows, err := db.Query(context.Background(),	sqlstatement)
+	
+	if err != nil {
+	panic(err)
+	}
+	for rows.Next() {
+		var moneothingwithvalue moneothingwithvalue
+		err = rows.Scan(&moneothingwithvalue.ThingId, &moneothingwithvalue.UniqueIdentifier, &moneothingwithvalue.DisplayName, &moneothingwithvalue.Value, &moneothingwithvalue.TimeStamp)
+		if(err != nil){
+			panic(err)
+		}
+		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
+	}
+	rows.Close()
+
+	
+	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting moneothings at: ", after, dur)
 }
-func getMoneoThinWithValueAndTimestamp(c *gin.Context){}
 
-func getMoneoThinWithTimestamp(c *gin.Context){}
+func getMoneoThingRawDataByTimeRange(c *gin.Context) {
+	var body timestamprangesearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    	now := time.Now()
+	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+	
 
-func getMoneoThinWithValue(c *gin.Context){}
+	var moneothingrawdatas []moneothingwithvalue
+	
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE timestamp >= parseDateTimeBestEffort('%s') AND timestamp <= parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.From, body.To,body.PageNumber * body.PageSize, body.PageSize)
+	rows, err := db.Query(context.Background(),	sqlstatement)
+	
+	if err != nil {
+	panic(err)
+	}
+	for rows.Next() {
+		var moneothingwithvalue moneothingwithvalue
+		err = rows.Scan(&moneothingwithvalue.ThingId, &moneothingwithvalue.UniqueIdentifier, &moneothingwithvalue.DisplayName, &moneothingwithvalue.Value, &moneothingwithvalue.TimeStamp)
+		if(err != nil){
+			panic(err)
+		}
+		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
+	}
+	rows.Close()
+
+	
+	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting moneothings at: ", after, dur)
+}
 
 func connectDB() (driver.Conn, error) {
 	var (
@@ -322,12 +395,11 @@ func main() {
 
 	router := gin.Default()
     router.GET("/moneothings", getMoneoThings)
-	router.GET("/rawdata", getRawDatas)
-	router.GET("/moneothingrawdata", getMoneoThingRawData)
-	
-	router.GET("/rawdata/:value", getRawDataByValue)
-	router.GET("/moneothingrawdata/:timestamp", getMoneoThingRawDataByTimeStamp)
+	router.POST("/rawdata", getRawDataByValue)
 	router.POST("/moneothingrawdata/thing", getMoneoThingByIdAndUnique)
+	router.POST("/moneothingrawdata/value", getMoneoThingByValue)
+	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStamp)
+	router.POST("/moneothingrawdata/timerange", getMoneoThingRawDataByTimeRange)
 	router.Run("localhost:4243")
 }
 
