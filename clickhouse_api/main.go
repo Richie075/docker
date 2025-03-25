@@ -149,44 +149,69 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 		panic(err)
 	}
 	
-	var moneothing moneothing
-	var moneothingrawdatas []moneothingrawdata
-	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothing WHERE thingid = '%s' AND uniqueidentifier = '%s'`, body.ThingId, body.UniqueIdentifier)
+	var moneothingrawdatas []moneothingwithvalue
+
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE thingid = '%s' AND uniqueidentifier = '%s' ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.ThingId, body.UniqueIdentifier, body.PageNumber * body.PageSize, body.PageSize)
 	rows, err := db.Query(context.Background(),	sqlstatement)
+	
 	if err != nil {
 	panic(err)
 	}
 	for rows.Next() {
-		err = rows.Scan(&moneothing.Id, &moneothing.ThingId, &moneothing.UniqueIdentifier, &moneothing.DisplayName)
+		var moneothingwithvalue moneothingwithvalue
+		err = rows.Scan(&moneothingwithvalue.ThingId, &moneothingwithvalue.UniqueIdentifier, &moneothingwithvalue.DisplayName, &moneothingwithvalue.Value, &moneothingwithvalue.TimeStamp)
 		if(err != nil){
 			panic(err)
 		}
+		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
 	}
 	rows.Close()
 
-	sqlstatement = fmt.Sprintf(`SELECT * FROM processdata.moneothingrawdata mr INNER JOIN processdata.rawdata r ON mr.rawdataid = r.id WHERE thingid = %d ORDER BY mr.timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY `, moneothing.Id, body.PageNumber * body.PageSize, body.PageSize)
-	var moneothingrawdata moneothingrawdata
-	var rawdata rawdata
-	rows, err = db.Query(context.Background(),	sqlstatement)
-	if err != nil {
-	panic(err)
-	}
-	for rows.Next() {
-		err = rows.Scan(&moneothingrawdata.Id, &moneothingrawdata.ThingId, &moneothingrawdata.RawDataId, &moneothingrawdata.TimeStamp, &rawdata.Id, &rawdata.Value)
-		if(err != nil){
-			panic(err)
-		}
-		moneothingrawdata.Rawdata =	rawdata
-		moneothingrawdatas = append(moneothingrawdatas, moneothingrawdata)
-		
-	}
-	rows.Close()
-	moneothing.Data = moneothingrawdatas
-	c.IndentedJSON(http.StatusCreated, moneothing)
+	
+	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Println("----> Finished getting moneothings at: ", after, dur)
 }
+
+func getMoneoThingByValue(c *gin.Context) {
+	var body valuesearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    	now := time.Now()
+	log.Println("----> Starting getting moneothingrawdata at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+	
+
+	var moneothingrawdatas []moneothingwithvalue
+
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE value = '%s' ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.Value, body.PageNumber * body.PageSize, body.PageSize)
+	rows, err := db.Query(context.Background(),	sqlstatement)
+	
+	if err != nil {
+	panic(err)
+	}
+	for rows.Next() {
+		var moneothingwithvalue moneothingwithvalue
+		err = rows.Scan(&moneothingwithvalue.ThingId, &moneothingwithvalue.UniqueIdentifier, &moneothingwithvalue.DisplayName, &moneothingwithvalue.Value, &moneothingwithvalue.TimeStamp)
+		if(err != nil){
+			panic(err)
+		}
+		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
+	}
+	rows.Close()
+
+	
+	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting moneothings at: ", after, dur)
+}
+
 func getRawDatas(c *gin.Context) {
 	now := time.Now()
 	log.Println("----> Starting getting rawdata at: ", now)
@@ -285,6 +310,7 @@ func main() {
 	panic(err)
 	}
 	log.SetOutput(f)
+	//insertData()
 	//db, err := connectDB()
 	//if err != nil {
 	//panic(err)
@@ -305,8 +331,9 @@ func main() {
 	router.Run("localhost:4243")
 }
 
-func insertData(db driver.Conn, ctx context.Context){
-	
+func insertData(){
+	db,err := connectDB()
+	ctx := context.Background()
 	now := time.Now()
 	rows, err := db.Query(ctx, "SELECT * FROM processdata.moneothing")
 	if err != nil {
@@ -323,7 +350,6 @@ func insertData(db driver.Conn, ctx context.Context){
 			panic(err)
 		}
 		moneothings = append(moneothings, moneothing)
-		fmt.Println("Thing: %d ThningId: %s, Uniqueidentifier: %s, DisplayName: %s", moneothing.Id, moneothing.ThingId.String(), moneothing.UniqueIdentifier, moneothing.DisplayName)
 		moneothingIds = append(moneothingIds, moneothing.Id)
 	// Process each row
 	}
@@ -356,7 +382,7 @@ func insertData(db driver.Conn, ctx context.Context){
 	}
 	}
 	sqlStatement = `INSERT INTO processdata.rawdata (id, value) VALUES ('%d','%s')`
-
+if(len(rawdatas) == 0){
 	for i := 0; i < 100; i++{
 		var rawdata = new(rawdata)
 		rawdata.Value = strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
@@ -365,6 +391,7 @@ func insertData(db driver.Conn, ctx context.Context){
     	fmt.Println("New record ID is:", int64(i))
 		rawDataIds = append(rawDataIds,int64(i) )
 	}
+}
 
 	sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES (%d,%d, %d, %d)`
 
