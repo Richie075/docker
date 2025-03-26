@@ -445,29 +445,30 @@ func insertData(){
 
 	
 	if(len(moneothings) == 0){
-	for i := 0; i < 3; i++{
-		insertQuery := fmt.Sprintf(sqlStatement,  moneothingsDefault[i].Id, moneothingsDefault[i].ThingId.String(), moneothingsDefault[i].UniqueIdentifier, moneothingsDefault[i].DisplayName)
-		db.QueryRow(ctx, insertQuery)
-     	
-    	fmt.Println("New record ID is:", i)
-		moneothingIds = append(moneothingIds, int64(i))
-	}
+		for i := 0; i < 3; i++{
+			insertQuery := fmt.Sprintf(sqlStatement,  moneothingsDefault[i].Id, moneothingsDefault[i].ThingId.String(), moneothingsDefault[i].UniqueIdentifier, moneothingsDefault[i].DisplayName)
+			db.QueryRow(ctx, insertQuery)
+			
+			fmt.Println("New record ID is:", i)
+			moneothingIds = append(moneothingIds, int64(i))
+		}
 	}
 	sqlStatement = `INSERT INTO processdata.rawdata (id, value) VALUES ('%d','%s')`
-if(len(rawdatas) == 0){
-	for i := 0; i < 100; i++{
-		var rawdata = new(rawdata)
-		rawdata.Value = strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
-		insertQuery := fmt.Sprintf(sqlStatement, i+1, rawdata.Value)
-		db.QueryRow(ctx, insertQuery)
-    	fmt.Println("New record ID is:", int64(i))
-		rawDataIds = append(rawDataIds,int64(i) )
+	if(len(rawdatas) == 0){
+		for i := 0; i < 100; i++{
+			var rawdata = new(rawdata)
+			rawdata.Value = strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
+			insertQuery := fmt.Sprintf(sqlStatement, i+1, rawdata.Value)
+			db.QueryRow(ctx, insertQuery)
+			fmt.Println("New record ID is:", int64(i))
+			rawDataIds = append(rawDataIds,int64(i) )
+		}
 	}
-}
 
 	sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES (%d,%d, %d, %d)`
-
-	for i := 0; i < 5000000; i++{
+	var actualCount int64
+	db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
+	for i := actualCount + 1; i < 5000000; i++{
 		insertQuery := fmt.Sprintf(sqlStatement, i, moneothingIds[i%3], rand.Int63n(100) + 1, time.Now().UnixMilli())
 		db.QueryRow(ctx, insertQuery)
     	fmt.Println("New record ID is:", i)

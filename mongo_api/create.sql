@@ -149,3 +149,22 @@ db.createView( "moneothingwithtimestamp", "moneothingrawdata", [
          }
    }
 ] )
+
+69996 , 100, 3
+db.stats()
+{
+  db: 'processdata',
+  collections: 4,
+  views: 1,
+  objects: 3160744,
+  avgObjSize: 238.99445636850058,
+  dataSize: 755400294,
+  storageSize: 109142016,
+  indexes: 4,
+  indexSize: 51904512,
+  totalSize: 161046528, --> 162 MB
+  scaleFactor: 1,
+  fsUsedSize: 95899766784,
+  fsTotalSize: 123453800448,
+  ok: 1
+}

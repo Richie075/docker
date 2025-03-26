@@ -139,7 +139,7 @@ func getRawDataByValue(c *gin.Context) {
 	now := time.Now()
 	log.Println("----> Starting getRawDataByValue at: ", now)
 	
-	sqlstatement := fmt.Sprintf(`SELECT * FROM public.rawdata WHERE value = '%s' ORDER BY timestamp OFFSET %d LIMIT %d`, body.Value, body.PageNumber * body.PageSize, body.PageSize)
+	sqlstatement := fmt.Sprintf(`SELECT * FROM public.rawdata WHERE value = '%s' ORDER BY value OFFSET %d LIMIT %d`, body.Value, body.PageNumber * body.PageSize, body.PageSize)
 	rows, err := db.Query(sqlstatement)
 	
 	if err != nil{
@@ -327,7 +327,7 @@ func main() {
 	boil.SetDB(db)
 
 	//selectMoneoThingsWithRawData(ctx, "380035ab-9190-4c75-a251-fbeb53dc0cb5")
-	//insertData()
+	insertData()
 	//ctx := context.Background()
 	/*db := connectDB()
 
@@ -437,9 +437,13 @@ func insertData(){
 
 	sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')`
 	id = 0
-	
-
-	for i := 0; i < 5000000; i++{
+	var actualCount int64
+	err = db.QueryRow("SELECT COUNT(*) FROM public.moneothingrawdata").Scan(&actualCount)
+	if err != nil{
+		panic(err)
+	}
+	upperBound := 5000000 - actualCount
+	for i := 0; i < int(upperBound); i++{
 
 		insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i%3], rand.Int63n(100) + 1, time.Now().Format(time.RFC3339))
 		query, err := db.Query(insertQuery)

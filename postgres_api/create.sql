@@ -67,3 +67,5 @@ ALTER TABLE IF EXISTS public.rawdata
         FROM moneothingrawdata AS mr
 		INNER JOIN moneothing AS m ON m.id = mr.thingid
 		INNER JOIN rawdata AS r ON r.id = mr.rawdataid
+
+        SELECT pg_size_pretty( pg_database_size('processdata') ); --> 402 MB mit 5000000, 100, 3

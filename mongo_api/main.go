@@ -10,14 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 
@@ -39,7 +37,7 @@ type moneothingrawdata struct{
 	Id int64 `json:"id"`
 	ThingId int64 `json:"thingid"`
 	RawDataId int64 `json:"rawdataid"`
-	TimeStamp time.Time `json:"timestamp"`
+	TimeStamp int64 `json:"timestamp"`
 	Rawdata rawdata `json:"rawdata"`
 	MoneoThing moneothing `json:"moneothing"`
 }
@@ -91,12 +89,7 @@ var rawdatas = []rawdata{
 	{Id: 3, Value: "7.98"},
 }
 
-var moneothingrawdatas = []moneothingrawdata{
-	{Id:1, ThingId: 1, RawDataId: 1, TimeStamp: time.Now()},
-	{Id:2, ThingId: 2, RawDataId: 2, TimeStamp: time.Now().Add(time.Duration(100))},
-	{Id:3, ThingId: 3, RawDataId: 2, TimeStamp: time.Now().Add(time.Duration(200))},
-	{Id:4, ThingId: 3, RawDataId: 2, TimeStamp: time.Now().Add(time.Duration(500))},
-}
+
 
 func getMoneoThings(c *gin.Context) {
 	now := time.Now()
@@ -236,27 +229,16 @@ func getMoneoThingRawDataByTimeStampRange(c *gin.Context) {
 		panic(err)
 	}
 
-	collection := db.Database("processdata").Collection("moneothingrawdataextended")
+	collection := db.Database("processdata").Collection("moneothingwithrawdataextended")
 
 	 pageOptions := options.Find()
- 	pageOptions.SetSkip(int64(body.PageNumber)) //0-i
+ 	pageOptions.SetSkip(int64(body.PageNumber * body.PageSize)) //0-i
  	pageOptions.SetLimit(int64(body.PageSize))
-	const (
-        layoutISO = "2006-01-02T15:04:05.111Z"
-    )
-	/*from,err := time.Parse(layoutISO, "2025-03-19T14:10:12.686+00:00")
-	if err != nil{
-		panic(err)
-	}
-	to,_ := time.Parse(layoutISO, body.To.Local().String())*/
-
-	from := primitive.NewDateTimeFromTime(body.From)
-	//from := primitive.NewDateTimeFromTime(time.Now().AddDate(0,0,-6))
-	//to := primitive.NewDateTimeFromTime(body.To)
-	//filter := bson.M{"timestamp": bson.M{"$gt": from, "$lt": to}}
-	//filter := bson.M{"timestamp": bson.M{"$gt": from}}
-	filter := bson.M{"timestamp": bson.M{"$gte": from}}
-	var result = moneothingwithvalue{}
+	
+	from := body.From.UnixMilli()
+	to := body.To.UnixMilli()
+	
+	filter := bson.M{"timestamp": bson.M{"$gte": from, "$lte": to}}
 	
 	cur, err := collection.Find(context.TODO(), filter, pageOptions)
 	var results = []moneothingwithvalue{}
@@ -264,7 +246,7 @@ func getMoneoThingRawDataByTimeStampRange(c *gin.Context) {
   		log.Fatal(err)
 	}
 	
-    c.IndentedJSON(http.StatusOK, result)
+    c.IndentedJSON(http.StatusOK, results)
 
 	//db.Disconnect()
 	after := time.Now()
@@ -272,9 +254,48 @@ func getMoneoThingRawDataByTimeStampRange(c *gin.Context) {
 	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
 }
 
-//func NewDateTimeFromTime(t time.Time) DateTime
 
-func getMoneoThingWithTimestamp(c *gin.Context){}
+func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
+	var body timestampsearchdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+    now := time.Now()
+	log.Println("----> Starting getting rawdata by value at: ", now)
+	db, err := connectDB()
+	if err != nil{
+		panic(err)
+	}
+														
+	collection := db.Database("processdata").Collection("moneothingwithrawdataextended")
+
+	 pageOptions := options.Find()
+ 	pageOptions.SetSkip(int64(body.PageNumber * body.PageSize)) //0-i
+ 	pageOptions.SetLimit(int64(body.PageSize))
+
+	var lower string
+	if body.Lower{
+		lower = "$lte"
+	}else{
+		lower = "$gte"
+	}
+	
+	timestamp := body.Time.UnixMilli()
+	filter := bson.M{"timestamp": bson.M{lower: timestamp}}
+	
+	cur, err := collection.Find(context.TODO(), filter, pageOptions)
+	var results = []moneothingwithvalue{}
+	if err = cur.All(context.Background(), &results); err != nil {
+  		log.Fatal(err)
+	}
+	
+    c.IndentedJSON(http.StatusOK, results)
+
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getting rawdata by value data at: ", after, dur)
+}
 
 func getMoneoThingByThingAndUnique(c *gin.Context){
 	var body moneothingsearchdto
@@ -289,7 +310,7 @@ func getMoneoThingByThingAndUnique(c *gin.Context){
 	}
 
 	  pageOptions := options.Find()
- pageOptions.SetSkip(int64(body.PageNumber)) //0-i
+ pageOptions.SetSkip(int64(body.PageNumber * body.PageSize)) //0-i
  pageOptions.SetLimit(int64(body.PageSize))
 
 	regex := fmt.Sprintf("^%s", body.UniqueIdentifier)
@@ -328,7 +349,7 @@ func getMoneoThingWithValue(c *gin.Context){
 	}
 
 	  pageOptions := options.Find()
- pageOptions.SetSkip(int64(body.PageNumber)) //0-i
+ pageOptions.SetSkip(int64(body.PageNumber * body.PageSize)) //0-i
  pageOptions.SetLimit(int64(body.PageSize))
 
 	regex := fmt.Sprintf("^%s", body.Value)
@@ -354,7 +375,6 @@ func getMoneoThingWithValue(c *gin.Context){
 	log.Println("----> Finished getting getMoneoThingWithValue by value data at: ", after, dur)
 
 }
-func getMoneoThingWithValueAndTimestamp(c *gin.Context){}
 
 func connectDB() (*mongo.Client, error){
 
@@ -371,29 +391,21 @@ func main() {
 	}
 	
 	log.SetOutput(f)
+	
 	/*db, err := connectDB()
 	if err != nil{
 		panic(err)
 	}
 	fmt.Println("Successfully connected to Mongo!")
 	
-	insertData(db)
-
+	insertData(db)*/
 	
-	
-
-	if err != nil {
-	panic(err)
-	}
-	*/
-
 	router := gin.Default()
     router.GET("/moneothings", getMoneoThings)
-	router.GET("/rawdata", getRawData)
-	router.GET("/moneothingrawdata", getMoneoThingRawData)
-	router.GET("/moneothing/:id", getMoneoThingByID)
-	router.GET("/rawdata/:value", getRawDataByValue)
-	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStampRange)
+	router.GET("/rawdatas", getRawData)
+	router.POST("/rawdatas", getRawDataByValue)
+	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStamp)
+	router.POST("/moneothingrawdata/timesrange", getMoneoThingRawDataByTimeStampRange)
 	router.POST("/moneothingrawdata/value", getMoneoThingWithValue)
 	router.POST("/moneothingrawdata/thing", getMoneoThingByThingAndUnique)
     router.Run("localhost:4242")
@@ -443,35 +455,52 @@ func insertData(db *mongo.Client){
   	if err != nil { log.Fatal(err) }
   	fmt.Println("Found record:", result.Id, result.ThingId, result.UniqueIdentifier)
 	}*/
-
 	collection = db.Database("processdata").Collection("rawdata")
-	var rawDataIds []int64
-	for i := 0; i < 100; i++{
-		var rawdata = rawdata{
-			Id: int64(i),
-			Value: strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64),
-		}
-		doc, err := toDoc(rawdata)
-		if err != nil {
-			panic(err)
-		}
-		res, err := collection.InsertOne(context.Background(), doc)
-		if err != nil {
-			panic(err)
-		}
-		
-		fmt.Println("New rawdata record ID is:", res.InsertedID)
-		rawDataIds = append(rawDataIds, rawdata.Id)
+	cur, err = collection.Find(context.Background(), bson.D{})
+	if err != nil { log.Fatal(err) }
+	var rawdataresults = []rawdata{}
+	var rawdataIds []int64
+	
+	defer cur.Close(context.Background())
+	if err = cur.All(context.Background(), &rawdataresults); err != nil {
+  		log.Fatal(err)
 	}
-	//}
+for _, v := range results {
+		fmt.Println("Found record all:", v.Id)
+		rawdataIds = append(rawdataIds, v.Id)
+	} 
+	
+	if(len(rawdataIds) == 0){
+		for i := 0; i < 100; i++{
+			var rawdata = rawdata{
+				Id: int64(i),
+				Value: strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64),
+			}
+			doc, err := toDoc(rawdata)
+			if err != nil {
+				panic(err)
+			}
+			res, err := collection.InsertOne(context.Background(), doc)
+			if err != nil {
+				panic(err)
+			}
+			
+			fmt.Println("New rawdata record ID is:", res.InsertedID)
+			rawdataIds = append(rawdataIds, rawdata.Id)
+		}
+	}
 	
 	collection = db.Database("processdata").Collection("moneothingrawdata")
-	for i := 0; i < 5000000; i++{
+	actualCount, err := collection.CountDocuments(context.Background(), bson.D{})
+	if err != nil {
+     panic(err)
+	}
+	for i := actualCount + 1; i < 5000000; i++{
 		var moneothingrawdata = moneothingrawdata{
 			Id: int64(i),
 			ThingId: moneothingIds[i%3],
 			RawDataId: rand.Int63n(100),
-			TimeStamp: time.Now(),
+			TimeStamp: time.Now().UTC().UnixMilli(),
 		}
      	doc, err := toDoc(moneothingrawdata)
 		res, err := collection.InsertOne(context.Background(), doc)
