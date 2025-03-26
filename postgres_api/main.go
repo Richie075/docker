@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	dbmodels "postgres_api/models"
@@ -97,6 +98,53 @@ type moneothingsearchdto struct{
 	PageSize int `json:"pagesize"`
 }
 
+type insertrelationdto struct{
+	ThingId uuid.UUID `json:"thingid"`
+	UniqueIdentifier string  `json:"uniqueidentifier"`
+	Values []string `json:"values"`
+	Time time.Time `json:"time"`
+	BulkInsert bool `json:"bulkinsert"`
+}
+
+func insertRelations(c *gin.Context){
+	var body insertrelationdto
+	if err := c.BindJSON(&body); err != nil{
+		log.Println(err)
+	}
+	db:= connectDB()
+	now := time.Now()
+	log.Println("----> Starting insertRelations at: ", now)
+	var arrrayvalues []string
+	for _, v := range body.Values {
+		str := fmt.Sprintf(`'%s'`, v)
+		arrrayvalues = append(arrrayvalues, str)
+	}
+	join := fmt.Sprintf(`array[%s]`,strings.Join(arrrayvalues, ","))
+	sqlstatement := fmt.Sprintf(`SELECT * FROM public.rawdata WHERE value = ANY(%s)`, join)
+	rows, err := db.Query(sqlstatement)
+	
+	if err != nil{
+		panic(err)
+	}
+
+	var rawdatas []rawdata
+	for rows.Next() {
+		var rawdata rawdata
+		err = rows.Scan(&rawdata.Id, &rawdata.Value)
+		if(err != nil){
+			panic(err)
+		}
+		rawdatas = append(rawdatas, rawdata)
+	}
+	var thingid int64
+	sqlstatement = fmt.Sprintf(`SELECT id FROM public.moneothing WHERE thingid = '%s' AND uniqueidentifier = '%s'`, body.ThingId, body.UniqueIdentifier)
+	db.QueryRow(sqlstatement).Scan(&thingid)
+    c.IndentedJSON(http.StatusOK, rawdatas)
+	//db.Disconnect()
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Println("----> Finished getRawDataByValue data at: ", after, dur)
+}
 func getMoneoThings(c *gin.Context) {
 	
 	db:= connectDB()
@@ -349,6 +397,8 @@ func main() {
 	router.POST("/moneothingrawdata/value", getMoneoThingByValue)
 	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStamp)
 	router.POST("/moneothingrawdata/timerange", getMoneoThingRawDataByTimeRange)
+	
+	router.POST("/moneothingrawdata/insert", insertRelations)
     router.Run("localhost:4241")
 }
 
