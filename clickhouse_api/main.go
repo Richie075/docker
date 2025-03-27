@@ -96,18 +96,19 @@ type moneothingsearchdto struct{
 }
 func getMoneoThings(c *gin.Context) {
 	now := time.Now()
-	log.Println("----> Starting getMoneoThings at: ", now)
+	log.Printf("----> Starting getMoneoThings at: %s", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
 	}
 
+	log.Println("----> Starting getmoneothings of data at: ", now)
 	rows, err := db.Query(context.Background(),"SELECT * FROM processdata.moneothing")
 	if err != nil {
 	panic(err)
 	}
 
-	log.Println("----> Starting getmoneothings of data at: ", now)
+	
 	var moneothings []moneothing
 	for rows.Next() {
 		var moneothing moneothing
@@ -120,21 +121,7 @@ func getMoneoThings(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothings)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getMoneoThings at: ", after, dur)
-}
-
-func postMoneoThings(c *gin.Context) {
-    var newMoneoThing moneothing
-
-    // Call BindJSON to bind the received JSON to
-    // newAlbum.
-    if err := c.BindJSON(&newMoneoThing); err != nil {
-        return
-    }
-
-    // Add the new album to the slice.
-    moneothingsDefault = append(moneothingsDefault, newMoneoThing)
-    c.IndentedJSON(http.StatusCreated, newMoneoThing)
+	log.Printf("----> Finished getMoneoThings at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
 func getMoneoThingByIdAndUnique(c *gin.Context) {
@@ -142,8 +129,8 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
-    	now := time.Now()
-	log.Println("----> Starting getMoneoThingByIdAndUnique at: ", now)
+    now := time.Now()
+	log.Printf("----> Starting getMoneoThingByIdAndUnique at: %s\n", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -152,10 +139,12 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 	var moneothingrawdatas []moneothingwithvalue
 
 	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE thingid = '%s' AND uniqueidentifier = '%s' ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.ThingId, body.UniqueIdentifier, body.PageNumber * body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(),	sqlstatement)
+	log.Printf("Executed query: %s\n", sqlstatement)
 	
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	for rows.Next() {
 		var moneothingwithvalue moneothingwithvalue
@@ -166,12 +155,11 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
 	}
 	rows.Close()
-
 	
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getMoneoThingByIdAndUnique at: ", after, dur)
+	log.Printf("----> Finished getMoneoThingByIdAndUnique at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
 func getMoneoThingByValue(c *gin.Context) {
@@ -179,8 +167,8 @@ func getMoneoThingByValue(c *gin.Context) {
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
-    	now := time.Now()
-	log.Println("----> Starting getMoneoThingByValue at: ", now)
+    now := time.Now()
+	log.Printf("----> Starting getMoneoThingByValue at: %s\n", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -190,8 +178,10 @@ func getMoneoThingByValue(c *gin.Context) {
 	var moneothingrawdatas []moneothingwithvalue
 
 	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE value = '%s' ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.Value, body.PageNumber * body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(),	sqlstatement)
-	
+	log.Printf("Executed query: %s\n", sqlstatement)
+
 	if err != nil {
 	panic(err)
 	}
@@ -209,7 +199,7 @@ func getMoneoThingByValue(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getMoneoThingByValue at: ", after, dur)
+	log.Printf("----> Finished getMoneoThingByValue at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
 func getRawDataByValue(c *gin.Context) {
@@ -217,8 +207,8 @@ func getRawDataByValue(c *gin.Context) {
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
-    	now := time.Now()
-	log.Println("----> Starting getRawDataByValue at: ", now)
+    now := time.Now()
+	log.Printf("----> Starting getRawDataByValue at: %s\n", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -228,9 +218,11 @@ func getRawDataByValue(c *gin.Context) {
 	}
 
 	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.rawdata WHERE value = '%s' ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.Value, body.PageNumber * body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(),sqlstatement)
+	log.Printf("Executed query: %s\n", sqlstatement)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 
 	var rawdatas []rawdata
@@ -241,14 +233,11 @@ func getRawDataByValue(c *gin.Context) {
 			panic(err)
 		}
 		rawdatas = append(rawdatas, rawdata)
-		
-
-	// Process each row
 	}
 	c.IndentedJSON(http.StatusCreated, rawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getRawDataByValue at: ", after, dur)
+	log.Printf("----> Finished getRawDataByValue at: %s, Duration: %d ms\n", after, dur)
 }
 
 
@@ -257,8 +246,8 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
-    	now := time.Now()
-	log.Println("----> Starting getMoneoThingRawDataByTimeStamp at: ", now)
+    now := time.Now()
+	log.Printf("----> Starting getMoneoThingRawDataByTimeStamp at: %s", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -273,10 +262,12 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 		operator = `>=`
 	}
 	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE timestamp %s parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, operator, body.Time,body.PageNumber * body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(),	sqlstatement)
+	log.Printf("Executed query: %s\n", sqlstatement)
 	
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 	for rows.Next() {
 		var moneothingwithvalue moneothingwithvalue
@@ -292,7 +283,7 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getMoneoThingRawDataByTimeStamp at: ", after, dur)
+	log.Printf("----> Finished getMoneoThingRawDataByTimeStamp at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
 func getMoneoThingRawDataByTimeRange(c *gin.Context) {
@@ -300,8 +291,8 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
-    	now := time.Now()
-	log.Println("----> Starting getMoneoThingRawDataByTimeRange at: ", now)
+    now := time.Now()
+	log.Printf("----> Starting getMoneoThingRawDataByTimeRange at: %s\n", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -311,8 +302,10 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	var moneothingrawdatas []moneothingwithvalue
 	
 	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE timestamp >= parseDateTimeBestEffort('%s') AND timestamp <= parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.From, body.To,body.PageNumber * body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(),	sqlstatement)
-	
+	log.Printf("Executed query: %s\n", sqlstatement)
+
 	if err != nil {
 	panic(err)
 	}
@@ -330,7 +323,7 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Println("----> Finished getMoneoThingRawDataByTimeRange at: ", after, dur)
+	log.Printf("----> Finished getMoneoThingRawDataByTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
 func connectDB() (driver.Conn, error) {
