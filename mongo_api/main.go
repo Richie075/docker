@@ -189,13 +189,13 @@ func getRawDataByValue(c *gin.Context) {
 	log.Printf("----> Finished getRawDataByValue at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
-func getMoneoThingRawDataByTimeStampRange(c *gin.Context) {
+func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	var body timestamprangesearchdto
 	if err := c.BindJSON(&body); err != nil{
 		log.Println(err)
 	}
     now := time.Now()
-	log.Printf("----> Starting getMoneoThingRawDataByTimeStampRange at: %s\n", now.Format(time.RFC3339))
+	log.Printf("----> Starting getMoneoThingRawDataByTimeRange at: %s\n", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -224,7 +224,7 @@ func getMoneoThingRawDataByTimeStampRange(c *gin.Context) {
 
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Printf("----> Finished getMoneoThingRawDataByTimeStampRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
+	log.Printf("----> Finished getMoneoThingRawDataByTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
 
@@ -313,7 +313,7 @@ func getMoneoThingWithValue(c *gin.Context){
 		log.Println(err)
 	}
      now := time.Now()
-	log.Printf("----> Starting func getMoneoThingWithValue by thing at: %s\n", now.Format(time.RFC3339))
+	log.Printf("----> Starting getMoneoThingWithValue by thing at: %s\n", now.Format(time.RFC3339))
 	db, err := connectDB()
 	if err != nil{
 		panic(err)
@@ -340,7 +340,7 @@ func getMoneoThingWithValue(c *gin.Context){
 
 	after := time.Now()
 	dur := after.Sub(now)
-	log.Printf("----> Finished func getMoneoThingWithValue at: %s, Duration: %d ms\n", after, dur)
+	log.Printf("----> Finished getMoneoThingWithValue at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur)
 
 }
 
@@ -373,7 +373,7 @@ func main() {
 	router.GET("/rawdatas", getRawData)
 	router.POST("/rawdatas", getRawDataByValue)
 	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStamp)
-	router.POST("/moneothingrawdata/timesrange", getMoneoThingRawDataByTimeStampRange)
+	router.POST("/moneothingrawdata/timerange", getMoneoThingRawDataByTimeStampRange)
 	router.POST("/moneothingrawdata/value", getMoneoThingWithValue)
 	router.POST("/moneothingrawdata/thing", getMoneoThingByThingAndUnique)
     router.Run("localhost:4242")
