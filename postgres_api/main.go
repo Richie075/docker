@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -11,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	dbmodels "postgres_api/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -103,6 +102,7 @@ type insertrelationdto struct{
 	UniqueIdentifier string  `json:"uniqueidentifier"`
 	Values []string `json:"values"`
 	Time time.Time `json:"time"`
+	NumberOfDatSets int `json:"numberofdatasets"`
 	BulkInsert bool `json:"bulkinsert"`
 }
 
@@ -113,13 +113,22 @@ func insertRelations(c *gin.Context){
 	}
 	db:= connectDB()
 	now := time.Now()
-	log.Println("----> Starting insertRelations at: ", now)
-	var arrrayvalues []string
-	for _, v := range body.Values {
-		str := fmt.Sprintf(`'%s'`, v)
-		arrrayvalues = append(arrrayvalues, str)
+	log.Println("----> Starting insertRelations at: %s, bulkinsert: %b", now.Format(time.RFC3339), body.BulkInsert)
+	var values []string
+	var rawdataids []int64
+	
+	values = append(values, body.Values...)
+	
+ 	numberofdatasets := body.NumberOfDatSets -len(body.Values)
+	for i := 0; i < numberofdatasets; i++{
+		str := strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
+		values = append(values, str)
 	}
-	join := fmt.Sprintf(`array[%s]`,strings.Join(arrrayvalues, ","))
+	var searchvalues []string
+	for _,v := range values{
+		searchvalues = append(searchvalues, fmt.Sprintf(`'%s'`, v))
+	}
+	join := fmt.Sprintf(`array[%s]`,strings.Join(searchvalues, ","))
 	sqlstatement := fmt.Sprintf(`SELECT * FROM public.rawdata WHERE value = ANY(%s)`, join)
 	rows, err := db.Query(sqlstatement)
 	
@@ -128,23 +137,127 @@ func insertRelations(c *gin.Context){
 	}
 
 	var rawdatas []rawdata
+	//rawdatastoinsert := values
 	for rows.Next() {
 		var rawdata rawdata
 		err = rows.Scan(&rawdata.Id, &rawdata.Value)
 		if(err != nil){
 			panic(err)
 		}
+		if index := find(values, rawdata.Value); index != -1 {
+			values = append(values[:index], values[index+1:]... )
+		}
 		rawdatas = append(rawdatas, rawdata)
+		rawdataids = append(rawdataids, rawdata.Id)
+	}
+	
+
+	var insertvalues []string
+	for _,v := range values{
+		insertvalues = append(insertvalues, fmt.Sprintf(`('%s')`, v))
+	}
+	sqlstatement = fmt.Sprintf(`INSERT INTO public.rawdata (value) VALUES %s returning id`, strings.Join(insertvalues, ","))
+
+	rows, err = db.Query(sqlstatement)
+	
+	if err != nil{
+		panic(err)
+	}
+
+	for rows.Next() {
+		var id int64
+		err = rows.Scan(&id)
+		if(err != nil){
+			panic(err)
+		}
+		rawdataids = append(rawdataids, id)
+	}
+	var ids []string
+	for _, i := range rawdataids {
+		ids = append(ids, strconv.Itoa(int(i)))
+	}
+	join = fmt.Sprintf(`array[%s]`,strings.Join(ids, ","))
+	sqlstatement = fmt.Sprintf(`SELECT * FROM public.rawdata WHERE id = ANY(%s)`, join)
+	rows, err = db.Query(sqlstatement)
+	
+	if err != nil{
+		panic(err)
+	}
+
+	var rawdatafromdb []rawdata
+	//rawdatastoinsert := values
+	for rows.Next() {
+		var rawdata rawdata
+		err = rows.Scan(&rawdata.Id, &rawdata.Value)
+		if(err != nil){
+			panic(err)
+		}
+		rawdatafromdb = append(rawdatafromdb, rawdata)
 	}
 	var thingid int64
 	sqlstatement = fmt.Sprintf(`SELECT id FROM public.moneothing WHERE thingid = '%s' AND uniqueidentifier = '%s'`, body.ThingId, body.UniqueIdentifier)
 	db.QueryRow(sqlstatement).Scan(&thingid)
-    c.IndentedJSON(http.StatusOK, rawdatas)
+	var insertedids []int64
+	if body.BulkInsert{
+		var buffer bytes.Buffer
+		sqlstatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES`
+		buffer.WriteString(sqlstatement)
+		valuestatement := `('%d', '%d', '%s')`
+		starttime := time.Now().Add(time.Duration(-numberofdatasets) * time.Second)
+		
+		var insertstring []string
+		for _, rd := range rawdatafromdb{ 
+			insertQuery := fmt.Sprintf(valuestatement, thingid, rd.Id, starttime.Format(time.RFC3339))
+			insertstring = append(insertstring, insertQuery)
+			starttime = starttime.Add(time.Second)
+			}
+			buffer.WriteString(strings.Join(insertstring, ","))
+			buffer.WriteString(` returning id`)
+			rows, err = db.Query(buffer.String())
+			if err != nil{
+				panic(err)
+			}
+			for rows.Next() {
+			var insertedid int64
+			err = rows.Scan(&insertedid)
+			if(err != nil){
+				panic(err)
+			}
+			insertedids = append(insertedids, insertedid)
+	}
+	}else{
+		sqlstatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s') returning id`
+		starttime := time.Now().Add(time.Duration(-numberofdatasets) * time.Second)
+		
+		for _, rd := range rawdatafromdb{ 
+			var insertedid int64
+			insertQuery := fmt.Sprintf(sqlstatement, thingid, rd.Id, starttime.Format(time.RFC3339))
+			starttime = starttime.Add(time.Second)
+			err := db.QueryRow(insertQuery).Scan(&insertedid)
+			if err != nil{
+				panic(err)
+			}
+			fmt.Println("Inserted:", insertedid)
+			
+			insertedids = append(insertedids, insertedid)
+		}
+	}
+    c.IndentedJSON(http.StatusOK, insertedids)
 	//db.Disconnect()
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Println("----> Finished getRawDataByValue data at: ", after, dur)
 }
+
+func find(s []string, search string) int{
+	for i, v := range s {
+		if v == search {
+			return i
+		}
+	}
+	return -1
+}
+
 func getMoneoThings(c *gin.Context) {
 	
 	db:= connectDB()
@@ -307,7 +420,6 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 		moneothingrawdatas = append(moneothingrawdatas, moneothingrawdata)
 	}
     c.IndentedJSON(http.StatusOK, moneothingrawdatas)
-	//db.Disconnect()
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Println("----> Finished getMoneoThingRawDataByTimeRange at: ", after, dur)
@@ -339,7 +451,6 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 		moneothingrawdatas = append(moneothingrawdatas, moneothingrawdata)
 	}
     c.IndentedJSON(http.StatusOK, moneothingrawdatas)
-	//db.Disconnect()
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Println("----> Finished getMoneoThingByIdAndUnique data at: ", after, dur)
@@ -354,20 +465,6 @@ func connectDB() *sql.DB {
 	return db
 }
 
-func selectMoneoThingsWithRawData(ctx context.Context, thingID string) {
-	moneoThing, err := dbmodels.Moneothings(dbmodels.MoneothingWhere.Thingid.EQ(thingID)).OneG(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("MoneoThing: \n\tID:%d \n\tName:%s \n\tEmail:%s\n", moneoThing.ID, moneoThing.Thingid, moneoThing.Uniqueidentifier)
-
-	rawdata := moneoThing.R.GetThingidMoneothingrawdata()
-
-	for _, a := range rawdata {
-		fmt.Printf("RawData: \n\tID:%d \n\tThinId:%d \n\tBody:%s \n\tCreatedAt:%v\n", a.ID, a.Thingid, a.Rawdataid, a.Timestamp)
-	}
-}
 
 func main() {
 	db := connectDB()
@@ -434,7 +531,6 @@ func insertData(){
 			panic(err)
 		}
 		moneothings = append(moneothings, moneothing)
-		fmt.Println("Thing: %d ThningId: %s, Uniqueidentifier: %s, DisplayName: %s", moneothing.Id, moneothing.ThingId.String(), moneothing.UniqueIdentifier, moneothing.DisplayName)
 		moneothingIds = append(moneothingIds, moneothing.Id)
 	// Process each row
 	}
