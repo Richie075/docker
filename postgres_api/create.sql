@@ -69,3 +69,22 @@ ALTER TABLE IF EXISTS public.rawdata
 		INNER JOIN rawdata AS r ON r.id = mr.rawdataid
 
         SELECT pg_size_pretty( pg_database_size('processdata') ); --> 402 MB mit 5000000, 100, 3
+
+--> insert rawdata
+INSERT INTO public.rawdata(
+	value)
+	SELECT 
+(
+  SELECT string_agg(x, '')
+  FROM (
+    SELECT chr(ascii('a') + floor(random() * 26)::integer)
+    FROM generate_series(1, 100 + b * 0)
+  ) AS y(x)
+) from generate_series(1,1000000,1) as b;
+
+--> insert relations
+INSERT INTO public.moneothingrawdata(
+	thingid, rawdataid, "timestamp")
+
+	select thingid, rawdataid, tm
+	FROM generate_series(1,5,1) as thingid, generate_series(25,1000024,1) as rawdataid, generate_series(now() - interval '3 month', now(), interval '1 minute') as tm;
