@@ -236,11 +236,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Rawdata next to timerange",
-                        "name": "timestampsearchdto",
+                        "name": "moneothingrawdatatimestampdto",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.timestampsearchdto"
+                            "$ref": "#/definitions/main.moneothingrawdatatimestampdto"
                         }
                     }
                 ],
@@ -355,6 +355,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "totime": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.moneothingrawdatatimestampdto": {
+            "type": "object",
+            "properties": {
+                "thingid": {
+                    "type": "string"
+                },
+                "time": {
                     "type": "string"
                 },
                 "uniqueidentifier": {

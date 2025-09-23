@@ -562,7 +562,7 @@ func getValuesForMoneoThingDuringTimeRange(c *gin.Context) {
 // @Tags         moneothingwitrawdatas
 // @Accept       json
 // @Produce      json
-// @Param		 timestampsearchdto	body		timestampsearchdto	true	"Rawdata next to timerange"
+// @Param		 moneothingrawdatatimestampdto	body		moneothingrawdatatimestampdto	true	"Rawdata next to timerange"
 // @Success      200  {object}  moneothingwithvaluesviewmodel
 // @Router       /moneothingwithrawdatas/timestamp [post]
 func getValuesForMoneoThingAtTime(c *gin.Context) {

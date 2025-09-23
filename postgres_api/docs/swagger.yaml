@@ -44,6 +44,15 @@ definitions:
       uniqueidentifier:
         type: string
     type: object
+  main.moneothingrawdatatimestampdto:
+    properties:
+      thingid:
+        type: string
+      time:
+        type: string
+      uniqueidentifier:
+        type: string
+    type: object
   main.moneothingsearchdto:
     properties:
       pagenumber:
@@ -281,10 +290,10 @@ paths:
       parameters:
       - description: Rawdata next to timerange
         in: body
-        name: timestampsearchdto
+        name: moneothingrawdatatimestampdto
         required: true
         schema:
-          $ref: '#/definitions/main.timestampsearchdto'
+          $ref: '#/definitions/main.moneothingrawdatatimestampdto'
       produces:
       - application/json
       responses:
