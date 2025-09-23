@@ -78,6 +78,18 @@ type moneothingwithvalue struct {
 	TimeStamp        time.Time `json:"timestamp"`
 }
 
+type moneothingwithvaluesviewmodel struct {
+	ThingId          uuid.UUID                     `json:"thingid"`
+	UniqueIdentifier string                        `json:"uniqueidentifier"`
+	DisplayName      string                        `json:"displayname"`
+	Rawdatas         []valuewithtimestampviewmodel `json:"rawdatas"`
+}
+
+type valuewithtimestampviewmodel struct {
+	Value     string    `json:"value"`
+	TimeStamp time.Time `json:"timestamp"`
+}
+
 type valuesearchdto struct {
 	Value      string `json:"value"`
 	PageNumber int    `json:"pagenumber"`
@@ -103,6 +115,21 @@ type moneothingsearchdto struct {
 	UniqueIdentifier string    `json:"uniqueidentifier"`
 	PageNumber       int       `json:"pagenumber"`
 	PageSize         int       `json:"pagesize"`
+}
+
+type moneothingrawdatatimerangedto struct {
+	ThingId          uuid.UUID `json:"thingid"`
+	UniqueIdentifier string    `json:"uniqueidentifier"`
+	FromTime         time.Time `json:"fromtime"`
+	ToTime           time.Time `json:"totime"`
+	PageNumber       int       `json:"pagenumber"`
+	PageSize         int       `json:"pagesize"`
+}
+
+type moneothingrawdatatimestampdto struct {
+	ThingId          uuid.UUID `json:"thingid"`
+	UniqueIdentifier string    `json:"uniqueidentifier"`
+	Time             time.Time `json:"time"`
 }
 
 type insertrelationdto struct {
@@ -276,6 +303,14 @@ func find(s []string, search string) int {
 	return -1
 }
 
+// Moneothings godoc
+// @Summary      Get all moneothings
+// @Description  get all moneothings
+// @Tags         moneothings
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  []moneothing
+// @Router       /moneothings/all [get]
 func getMoneoThings(c *gin.Context) {
 	now := time.Now()
 	log.Printf("----> Starting getMoneoThings at: %s\n", now.Format(time.RFC3339))
@@ -309,10 +344,10 @@ func getMoneoThings(c *gin.Context) {
 // ShowRawdata godoc
 // @Summary      Show rawdatas
 // @Description  get rawdatas by value
-// @Tags         accounts
+// @Tags         rawdatas
 // @Accept       json
 // @Produce      json
-// @Param		 valuesearchdto	body		valuesearchdto	true	"Add account"
+// @Param		 valuesearchdto	body		valuesearchdto	true	"Get rawdatas"
 // @Success      200  {object}  []rawdataviewmodel
 // @Router       /rawdatas [post]
 func getRawDataByValue(c *gin.Context) {
@@ -351,10 +386,10 @@ func getRawDataByValue(c *gin.Context) {
 // Get moneothing godoc
 // @Summary      get moneothing
 // @Description  get moneothing by value
-// @Tags         accounts
+// @Tags         moneothingrawdatas
 // @Accept       json
 // @Produce      json
-// @Param		 valuesearchdto	body		valuesearchdto	true	"Add account"
+// @Param		 valuesearchdto	body		valuesearchdto	true	"get moneothing by value"
 // @Success      200  {object}  []moneothingwithvalue
 // @Router       /moneothingrawdatas/value [post]
 func getMoneoThingByValue(c *gin.Context) {
@@ -391,11 +426,11 @@ func getMoneoThingByValue(c *gin.Context) {
 
 // Get moneothing godoc
 // @Summary      get moneothing
-// @Description  get moneothing by value
-// @Tags         accounts
+// @Description  get moneothing by timestamp
+// @Tags         moneothingrawdatas
 // @Accept       json
 // @Produce      json
-// @Param		 timestampsearchdto	body		timestampsearchdto	true	"Add account"
+// @Param		 timestampsearchdto	body		timestampsearchdto	true	"get moneothing by timestamp"
 // @Success      200  {object}  []moneothingwithvalue
 // @Router       /moneothingrawdatas/timestamp [post]
 func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
@@ -437,12 +472,12 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 }
 
 // Get moneothing godoc
-// @Summary      get moneothing
+// @Summary      get moneothing with rawdata
 // @Description  get moneothing by value
-// @Tags         accounts
+// @Tags         moneothingrawdatas
 // @Accept       json
 // @Produce      json
-// @Param		 timestamprangesearchdto	body		timestamprangesearchdto	true	"Add account"
+// @Param		 timestamprangesearchdto	body		timestamprangesearchdto	true	"get moneothing with rawdata by timerange"
 // @Success      200  {object}  []moneothingwithvalue
 // @Router       /moneothingrawdatas/timerange [post]
 func getMoneoThingRawDataByTimeRange(c *gin.Context) {
@@ -478,6 +513,102 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	log.Printf("----> Finished getMoneoThingRawDataByTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
+// Get values for moneothing godoc
+// @Summary      get values for moneothing in given timerange
+// @Description  get values for moneothing
+// @Tags         moneothingwitrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 moneothingrawdatatimerangedto	body		moneothingrawdatatimerangedto	true	"Rawdatas for timerange"
+// @Success      200  {object}  moneothingwithvaluesviewmodel
+// @Router       /moneothingwithrawdatas/timerange [post]
+func getValuesForMoneoThingDuringTimeRange(c *gin.Context) {
+	var body moneothingrawdatatimerangedto
+	if err := c.BindJSON(&body); err != nil {
+		log.Println(err)
+	}
+	now := time.Now()
+	log.Printf("----> Starting getValuesForMoneoThingDuringTimeRange at: %s", now.Format(time.RFC3339))
+	db := connectDB()
+
+	sqlstatement := fmt.Sprintf(`SELECT * FROM public.moneothingwithrawdata WHERE thingid = '%s' AND uniqueidentifier = '%s' AND timestamp::timestamptz >= to_timestamp(%d) AND timestamp::timestamptz <= to_timestamp(%d) ORDER BY timestamp DESC OFFSET %d LIMIT %d`, body.ThingId, body.UniqueIdentifier, body.FromTime.UnixMilli()/1000, body.ToTime.UnixMilli()/1000, body.PageNumber*body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
+	rows, err := db.Query(sqlstatement)
+	log.Printf("Executed query: %s\n", sqlstatement)
+	if err != nil {
+		panic(err)
+	}
+
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
+
+	for rows.Next() {
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		err = rows.Scan(&moneothingwithvaluesviewmodel.ThingId, &moneothingwithvaluesviewmodel.UniqueIdentifier, &moneothingwithvaluesviewmodel.DisplayName, &valuewithtimestampviewmodel.Value, &valuewithtimestampviewmodel.TimeStamp)
+
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
+	}
+
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
+	c.IndentedJSON(http.StatusOK, moneothingwithvaluesviewmodel)
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Printf("----> Finished getValuesForMoneoThingDuringTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
+}
+
+// Get values for moneothing godoc
+// @Summary      get values for moneothing at timestamp
+// @Description  get values for moneothing
+// @Tags         moneothingwitrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 timestampsearchdto	body		timestampsearchdto	true	"Rawdata next to timerange"
+// @Success      200  {object}  moneothingwithvaluesviewmodel
+// @Router       /moneothingwithrawdatas/timestamp [post]
+func getValuesForMoneoThingAtTime(c *gin.Context) {
+	var body moneothingrawdatatimestampdto
+	if err := c.BindJSON(&body); err != nil {
+		log.Println(err)
+	}
+	now := time.Now()
+	log.Printf("----> Starting getValuesForMoneoThingAtTime at: %s", now.Format(time.RFC3339))
+	db := connectDB()
+
+	sqlstatement := fmt.Sprintf(`SELECT * FROM public.moneothingwithrawdata WHERE thingid = '%s' AND uniqueidentifier = '%s' AND timestamp::timestamptz <= to_timestamp(%d) ORDER BY timestamp DESC LIMIT 1`, body.ThingId, body.UniqueIdentifier, body.Time.UnixMilli()/1000)
+
+	log.Printf("Executing query: %s\n", sqlstatement)
+	rows, err := db.Query(sqlstatement)
+	log.Printf("Executed query: %s\n", sqlstatement)
+	if err != nil {
+		panic(err)
+	}
+
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
+
+	for rows.Next() {
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		err = rows.Scan(&moneothingwithvaluesviewmodel.ThingId, &moneothingwithvaluesviewmodel.UniqueIdentifier, &moneothingwithvaluesviewmodel.DisplayName, &valuewithtimestampviewmodel.Value, &valuewithtimestampviewmodel.TimeStamp)
+
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
+	}
+
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
+	c.IndentedJSON(http.StatusOK, moneothingwithvaluesviewmodel)
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Printf("----> Finished getValuesForMoneoThingAtTime at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
+}
+
+// Get moneothing godoc
+// @Summary      get moneothing
+// @Description  get moneothing
+// @Tags         moneothingrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 moneothingsearchdto	body		moneothingsearchdto	true	"get a moneothing"
+// @Success      200  {object}  moneothing
+// @Router       /moneothings [post]
 func getMoneoThingByIdAndUnique(c *gin.Context) {
 	var body moneothingsearchdto
 	if err := c.BindJSON(&body); err != nil {
@@ -495,16 +626,14 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 		panic(err)
 	}
 
-	var moneothingrawdatas []moneothingwithvalue
+	var moneothing moneothing
 	for rows.Next() {
-		var moneothingrawdata moneothingwithvalue
-		err = rows.Scan(&moneothingrawdata.ThingId, &moneothingrawdata.UniqueIdentifier, &moneothingrawdata.DisplayName, &moneothingrawdata.Value, &moneothingrawdata.TimeStamp)
+		err = rows.Scan(&moneothing.ThingId, &moneothing.UniqueIdentifier, &moneothing.DisplayName)
 		if err != nil {
 			panic(err)
 		}
-		moneothingrawdatas = append(moneothingrawdatas, moneothingrawdata)
 	}
-	c.IndentedJSON(http.StatusOK, moneothingrawdatas)
+	c.IndentedJSON(http.StatusOK, moneothing)
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Printf("----> Finished getMoneoThingByIdAndUnique data at: %s, Duration: %d md\n", after.Format(time.RFC3339), dur.Milliseconds())
@@ -557,7 +686,8 @@ func main() {
 		}
 		moneothings := v1.Group("/moneothings")
 		{
-			moneothings.GET("", getMoneoThings)
+			moneothings.GET("all", getMoneoThings)
+			moneothings.POST("", getMoneoThingByIdAndUnique)
 		}
 		moneothingrawdatas := v1.Group("/moneothingrawdatas")
 		{
@@ -567,6 +697,11 @@ func main() {
 			moneothingrawdatas.POST("timerange", getMoneoThingRawDataByTimeRange)
 
 			moneothingrawdatas.POST("insert", insertRelations)
+		}
+		moneothingwithrawdatas := v1.Group("/moneothingwithrawdatas")
+		{
+			moneothingwithrawdatas.POST("timerange", getValuesForMoneoThingDuringTimeRange)
+			moneothingwithrawdatas.POST("timestamp", getValuesForMoneoThingAtTime)
 		}
 	}
 

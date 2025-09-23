@@ -1,0 +1,210 @@
+definitions:
+  main.rawdataviewmodel:
+    properties:
+      id:
+        type: integer
+      value:
+        type: string
+    type: object
+  postgres_api.moneothing:
+    properties:
+      Data:
+        items:
+          $ref: '#/definitions/postgres_api.moneothingrawdata'
+        type: array
+      displayname:
+        type: string
+      id:
+        type: integer
+      thingid:
+        type: string
+      uniqueidentifier:
+        type: string
+    type: object
+  postgres_api.moneothingrawdata:
+    properties:
+      id:
+        type: integer
+      moneothing:
+        $ref: '#/definitions/postgres_api.moneothing'
+      rawdata:
+        $ref: '#/definitions/postgres_api.rawdata'
+      rawdataid:
+        type: integer
+      thingid:
+        type: integer
+      timestamp:
+        type: string
+    type: object
+  postgres_api.moneothingwithvalue:
+    properties:
+      displayname:
+        type: string
+      thingid:
+        type: string
+      timestamp:
+        type: string
+      uniqueidentifier:
+        type: string
+      value:
+        type: string
+    type: object
+  postgres_api.rawdata:
+    properties:
+      Data:
+        items:
+          $ref: '#/definitions/postgres_api.moneothingrawdata'
+        type: array
+      id:
+        type: integer
+      value:
+        type: string
+    type: object
+  postgres_api.timestamprangesearchdto:
+    properties:
+      from:
+        type: string
+      pagenumber:
+        type: integer
+      pagesize:
+        type: integer
+      to:
+        type: string
+    type: object
+  postgres_api.timestampsearchdto:
+    properties:
+      lower:
+        type: boolean
+      pagenumber:
+        type: integer
+      pagesize:
+        type: integer
+      time:
+        type: string
+    type: object
+  postgres_api.valuesearchdto:
+    properties:
+      pagenumber:
+        type: integer
+      pagesize:
+        type: integer
+      value:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /moneothing:
+    get:
+      consumes:
+      - application/json
+      description: get all moneothings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/postgres_api.moneothing'
+            type: array
+      summary: Get all moneothings
+      tags:
+      - accounts
+  /moneothingrawdatas/timerange:
+    post:
+      consumes:
+      - application/json
+      description: get moneothing by value
+      parameters:
+      - description: Add account
+        in: body
+        name: timestamprangesearchdto
+        required: true
+        schema:
+          $ref: '#/definitions/postgres_api.timestamprangesearchdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/postgres_api.moneothingwithvalue'
+            type: array
+      summary: get moneothing with rawdata
+      tags:
+      - accounts
+  /moneothingrawdatas/timestamp:
+    post:
+      consumes:
+      - application/json
+      description: get moneothing by value
+      parameters:
+      - description: Add account
+        in: body
+        name: timestampsearchdto
+        required: true
+        schema:
+          $ref: '#/definitions/postgres_api.timestampsearchdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/postgres_api.moneothingwithvalue'
+            type: array
+      summary: get moneothing
+      tags:
+      - accounts
+  /moneothingrawdatas/value:
+    post:
+      consumes:
+      - application/json
+      description: get moneothing by value
+      parameters:
+      - description: Add account
+        in: body
+        name: valuesearchdto
+        required: true
+        schema:
+          $ref: '#/definitions/postgres_api.valuesearchdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/postgres_api.moneothingwithvalue'
+            type: array
+      summary: get moneothing
+      tags:
+      - accounts
+  /rawdatas:
+    post:
+      consumes:
+      - application/json
+      description: get rawdatas by value
+      parameters:
+      - description: Add account
+        in: body
+        name: valuesearchdto
+        required: true
+        schema:
+          $ref: '#/definitions/postgres_api.valuesearchdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.rawdataviewmodel'
+            type: array
+      summary: Show rawdatas
+      tags:
+      - accounts
+swagger: "2.0"

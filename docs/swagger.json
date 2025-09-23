@@ -1,0 +1,326 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/moneothing": {
+            "get": {
+                "description": "get all moneothings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get all moneothings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/postgres_api.moneothing"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/moneothingrawdatas/timerange": {
+            "post": {
+                "description": "get moneothing by value",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "get moneothing with rawdata",
+                "parameters": [
+                    {
+                        "description": "Add account",
+                        "name": "timestamprangesearchdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postgres_api.timestamprangesearchdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/postgres_api.moneothingwithvalue"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/moneothingrawdatas/timestamp": {
+            "post": {
+                "description": "get moneothing by value",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "get moneothing",
+                "parameters": [
+                    {
+                        "description": "Add account",
+                        "name": "timestampsearchdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postgres_api.timestampsearchdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/postgres_api.moneothingwithvalue"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/moneothingrawdatas/value": {
+            "post": {
+                "description": "get moneothing by value",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "get moneothing",
+                "parameters": [
+                    {
+                        "description": "Add account",
+                        "name": "valuesearchdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postgres_api.valuesearchdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/postgres_api.moneothingwithvalue"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/rawdatas": {
+            "post": {
+                "description": "get rawdatas by value",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Show rawdatas",
+                "parameters": [
+                    {
+                        "description": "Add account",
+                        "name": "valuesearchdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postgres_api.valuesearchdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.rawdataviewmodel"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.rawdataviewmodel": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.moneothing": {
+            "type": "object",
+            "properties": {
+                "Data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/postgres_api.moneothingrawdata"
+                    }
+                },
+                "displayname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.moneothingrawdata": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "moneothing": {
+                    "$ref": "#/definitions/postgres_api.moneothing"
+                },
+                "rawdata": {
+                    "$ref": "#/definitions/postgres_api.rawdata"
+                },
+                "rawdataid": {
+                    "type": "integer"
+                },
+                "thingid": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.moneothingwithvalue": {
+            "type": "object",
+            "properties": {
+                "displayname": {
+                    "type": "string"
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.rawdata": {
+            "type": "object",
+            "properties": {
+                "Data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/postgres_api.moneothingrawdata"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.timestamprangesearchdto": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "pagenumber": {
+                    "type": "integer"
+                },
+                "pagesize": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.timestampsearchdto": {
+            "type": "object",
+            "properties": {
+                "lower": {
+                    "type": "boolean"
+                },
+                "pagenumber": {
+                    "type": "integer"
+                },
+                "pagesize": {
+                    "type": "integer"
+                },
+                "time": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.valuesearchdto": {
+            "type": "object",
+            "properties": {
+                "pagenumber": {
+                    "type": "integer"
+                },
+                "pagesize": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
