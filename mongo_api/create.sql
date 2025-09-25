@@ -168,3 +168,7 @@ db.stats()
   fsTotalSize: 123453800448,
   ok: 1
 }
+
+swag init
+sed -i 's/LeftDelim.*//g' ./docs/docs.go
+sed -i 's/RightDelim.*//g' ./docs/docs.go
