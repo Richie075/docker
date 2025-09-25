@@ -15,32 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/moneothing": {
-            "get": {
-                "description": "get all moneothings",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "accounts"
-                ],
-                "summary": "Get all moneothings",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/postgres_api.moneothing"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/moneothingrawdatas/timerange": {
             "post": {
                 "description": "get moneothing by value",
@@ -51,12 +25,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "accounts"
+                    "moneothingrawdatas"
                 ],
                 "summary": "get moneothing with rawdata",
                 "parameters": [
                     {
-                        "description": "Add account",
+                        "description": "get moneothing with rawdata by timerange",
                         "name": "timestamprangesearchdto",
                         "in": "body",
                         "required": true,
@@ -80,7 +54,7 @@ const docTemplate = `{
         },
         "/moneothingrawdatas/timestamp": {
             "post": {
-                "description": "get moneothing by value",
+                "description": "get moneothing by timestamp",
                 "consumes": [
                     "application/json"
                 ],
@@ -88,12 +62,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "accounts"
+                    "moneothingrawdatas"
                 ],
                 "summary": "get moneothing",
                 "parameters": [
                     {
-                        "description": "Add account",
+                        "description": "get moneothing by timestamp",
                         "name": "timestampsearchdto",
                         "in": "body",
                         "required": true,
@@ -125,12 +99,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "accounts"
+                    "moneothingrawdatas"
                 ],
                 "summary": "get moneothing",
                 "parameters": [
                     {
-                        "description": "Add account",
+                        "description": "get moneothing by value",
                         "name": "valuesearchdto",
                         "in": "body",
                         "required": true,
@@ -152,6 +126,134 @@ const docTemplate = `{
                 }
             }
         },
+        "/moneothings": {
+            "post": {
+                "description": "get moneothing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moneothingrawdatas"
+                ],
+                "summary": "get moneothing",
+                "parameters": [
+                    {
+                        "description": "get a moneothing",
+                        "name": "moneothingsearchdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/postgres_api.moneothingsearchdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/postgres_api.moneothing"
+                        }
+                    }
+                }
+            }
+        },
+        "/moneothings/all": {
+            "get": {
+                "description": "get all moneothings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moneothings"
+                ],
+                "summary": "Get all moneothings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/postgres_api.moneothing"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/moneothingwithrawdatas/timerange": {
+            "post": {
+                "description": "get values for moneothing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moneothingwitrawdatas"
+                ],
+                "summary": "get values for moneothing in given timerange",
+                "parameters": [
+                    {
+                        "description": "Rawdatas for timerange",
+                        "name": "moneothingrawdatatimerangedto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.moneothingrawdatatimerangedto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.moneothingwithvaluesviewmodel"
+                        }
+                    }
+                }
+            }
+        },
+        "/moneothingwithrawdatas/timestamp": {
+            "post": {
+                "description": "get values for moneothing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moneothingwitrawdatas"
+                ],
+                "summary": "get values for moneothing at timestamp",
+                "parameters": [
+                    {
+                        "description": "Rawdata next to timerange",
+                        "name": "moneothingrawdatatimestampdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.moneothingrawdatatimestampdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.moneothingwithvaluesviewmodel"
+                        }
+                    }
+                }
+            }
+        },
         "/rawdatas": {
             "post": {
                 "description": "get rawdatas by value",
@@ -162,12 +264,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "accounts"
+                    "rawdatas"
                 ],
                 "summary": "Show rawdatas",
                 "parameters": [
                     {
-                        "description": "Add account",
+                        "description": "Get rawdatas",
                         "name": "valuesearchdto",
                         "in": "body",
                         "required": true,
@@ -191,11 +293,79 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "main.moneothingrawdatatimerangedto": {
+            "type": "object",
+            "properties": {
+                "fromtime": {
+                    "type": "string"
+                },
+                "pagenumber": {
+                    "type": "integer"
+                },
+                "pagesize": {
+                    "type": "integer"
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "totime": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.moneothingrawdatatimestampdto": {
+            "type": "object",
+            "properties": {
+                "thingid": {
+                    "type": "string"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.moneothingwithvaluesviewmodel": {
+            "type": "object",
+            "properties": {
+                "displayname": {
+                    "type": "string"
+                },
+                "rawdatas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.valuewithtimestampviewmodel"
+                    }
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                }
+            }
+        },
         "main.rawdataviewmodel": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.valuewithtimestampviewmodel": {
+            "type": "object",
+            "properties": {
+                "timestamp": {
+                    "type": "string"
                 },
                 "value": {
                     "type": "string"
@@ -244,6 +414,23 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "postgres_api.moneothingsearchdto": {
+            "type": "object",
+            "properties": {
+                "pagenumber": {
+                    "type": "integer"
+                },
+                "pagesize": {
+                    "type": "integer"
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
                     "type": "string"
                 }
             }

@@ -1,21 +1,4 @@
 definitions:
-  main.insertrelationdto:
-    properties:
-      bulkinsert:
-        type: boolean
-      numberofdatasets:
-        type: integer
-      thingid:
-        type: string
-      time:
-        type: string
-      uniqueidentifier:
-        type: string
-      values:
-        items:
-          type: string
-        type: array
-    type: object
   main.moneothing:
     properties:
       Data:
@@ -44,7 +27,7 @@ definitions:
       thingid:
         type: integer
       timestamp:
-        type: string
+        type: integer
     type: object
   main.moneothingrawdatatimerangedto:
     properties:
@@ -94,19 +77,6 @@ definitions:
       value:
         type: string
     type: object
-  main.moneothingwithvaluesviewmodel:
-    properties:
-      displayname:
-        type: string
-      rawdatas:
-        items:
-          $ref: '#/definitions/main.valuewithtimestampviewmodel'
-        type: array
-      thingid:
-        type: string
-      uniqueidentifier:
-        type: string
-    type: object
   main.rawdata:
     properties:
       Data:
@@ -125,28 +95,6 @@ definitions:
       value:
         type: string
     type: object
-  main.timestamprangesearchdto:
-    properties:
-      from:
-        type: string
-      pagenumber:
-        type: integer
-      pagesize:
-        type: integer
-      to:
-        type: string
-    type: object
-  main.timestampsearchdto:
-    properties:
-      lower:
-        type: boolean
-      pagenumber:
-        type: integer
-      pagesize:
-        type: integer
-      time:
-        type: string
-    type: object
   main.valuesearchdto:
     properties:
       pagenumber:
@@ -156,41 +104,9 @@ definitions:
       value:
         type: string
     type: object
-  main.valuewithtimestampviewmodel:
-    properties:
-      timestamp:
-        type: string
-      value:
-        type: string
-    type: object
 info:
   contact: {}
 paths:
-  /moneothingrawdatas/insert:
-    post:
-      consumes:
-      - application/json
-      description: Insert data
-      parameters:
-      - description: Insert data
-        in: body
-        name: valueseinsertrelationdtoarchdto
-        required: true
-        schema:
-          $ref: '#/definitions/main.insertrelationdto'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              format: int64
-              type: integer
-            type: array
-      summary: Insert data
-      tags:
-      - moneothingrawdatas
   /moneothingrawdatas/timerange:
     post:
       consumes:
@@ -199,10 +115,10 @@ paths:
       parameters:
       - description: get moneothing with rawdata by timerange
         in: body
-        name: timestamprangesearchdto
+        name: moneothingrawdatatimerangedto
         required: true
         schema:
-          $ref: '#/definitions/main.timestamprangesearchdto'
+          $ref: '#/definitions/main.moneothingrawdatatimerangedto'
       produces:
       - application/json
       responses:
@@ -223,34 +139,10 @@ paths:
       parameters:
       - description: get moneothing by timestamp
         in: body
-        name: timestampsearchdto
+        name: moneothingrawdatatimestampdto
         required: true
         schema:
-          $ref: '#/definitions/main.timestampsearchdto'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/main.moneothingwithvalue'
-            type: array
-      summary: get moneothing
-      tags:
-      - moneothingrawdatas
-  /moneothingrawdatas/value:
-    post:
-      consumes:
-      - application/json
-      description: get moneothing by value
-      parameters:
-      - description: get moneothing by value
-        in: body
-        name: valuesearchdto
-        required: true
-        schema:
-          $ref: '#/definitions/main.valuesearchdto'
+          $ref: '#/definitions/main.moneothingrawdatatimestampdto'
       produces:
       - application/json
       responses:
@@ -302,50 +194,6 @@ paths:
       summary: Get all moneothings
       tags:
       - moneothings
-  /moneothingwithrawdatas/timerange:
-    post:
-      consumes:
-      - application/json
-      description: get values for moneothing
-      parameters:
-      - description: Rawdatas for timerange
-        in: body
-        name: moneothingrawdatatimerangedto
-        required: true
-        schema:
-          $ref: '#/definitions/main.moneothingrawdatatimerangedto'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
-      summary: get values for moneothing in given timerange
-      tags:
-      - moneothingwitrawdatas
-  /moneothingwithrawdatas/timestamp:
-    post:
-      consumes:
-      - application/json
-      description: get values for moneothing
-      parameters:
-      - description: Rawdata next to timerange
-        in: body
-        name: moneothingrawdatatimestampdto
-        required: true
-        schema:
-          $ref: '#/definitions/main.moneothingrawdatatimestampdto'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
-      summary: get values for moneothing at timestamp
-      tags:
-      - moneothingwitrawdatas
   /rawdatas:
     post:
       consumes:

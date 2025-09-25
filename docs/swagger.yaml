@@ -1,8 +1,52 @@
 definitions:
+  main.moneothingrawdatatimerangedto:
+    properties:
+      fromtime:
+        type: string
+      pagenumber:
+        type: integer
+      pagesize:
+        type: integer
+      thingid:
+        type: string
+      totime:
+        type: string
+      uniqueidentifier:
+        type: string
+    type: object
+  main.moneothingrawdatatimestampdto:
+    properties:
+      thingid:
+        type: string
+      time:
+        type: string
+      uniqueidentifier:
+        type: string
+    type: object
+  main.moneothingwithvaluesviewmodel:
+    properties:
+      displayname:
+        type: string
+      rawdatas:
+        items:
+          $ref: '#/definitions/main.valuewithtimestampviewmodel'
+        type: array
+      thingid:
+        type: string
+      uniqueidentifier:
+        type: string
+    type: object
   main.rawdataviewmodel:
     properties:
       id:
         type: integer
+      value:
+        type: string
+    type: object
+  main.valuewithtimestampviewmodel:
+    properties:
+      timestamp:
+        type: string
       value:
         type: string
     type: object
@@ -34,6 +78,17 @@ definitions:
       thingid:
         type: integer
       timestamp:
+        type: string
+    type: object
+  postgres_api.moneothingsearchdto:
+    properties:
+      pagenumber:
+        type: integer
+      pagesize:
+        type: integer
+      thingid:
+        type: string
+      uniqueidentifier:
         type: string
     type: object
   postgres_api.moneothingwithvalue:
@@ -94,30 +149,13 @@ definitions:
 info:
   contact: {}
 paths:
-  /moneothing:
-    get:
-      consumes:
-      - application/json
-      description: get all moneothings
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/postgres_api.moneothing'
-            type: array
-      summary: Get all moneothings
-      tags:
-      - accounts
   /moneothingrawdatas/timerange:
     post:
       consumes:
       - application/json
       description: get moneothing by value
       parameters:
-      - description: Add account
+      - description: get moneothing with rawdata by timerange
         in: body
         name: timestamprangesearchdto
         required: true
@@ -134,14 +172,14 @@ paths:
             type: array
       summary: get moneothing with rawdata
       tags:
-      - accounts
+      - moneothingrawdatas
   /moneothingrawdatas/timestamp:
     post:
       consumes:
       - application/json
-      description: get moneothing by value
+      description: get moneothing by timestamp
       parameters:
-      - description: Add account
+      - description: get moneothing by timestamp
         in: body
         name: timestampsearchdto
         required: true
@@ -158,14 +196,14 @@ paths:
             type: array
       summary: get moneothing
       tags:
-      - accounts
+      - moneothingrawdatas
   /moneothingrawdatas/value:
     post:
       consumes:
       - application/json
       description: get moneothing by value
       parameters:
-      - description: Add account
+      - description: get moneothing by value
         in: body
         name: valuesearchdto
         required: true
@@ -182,14 +220,97 @@ paths:
             type: array
       summary: get moneothing
       tags:
-      - accounts
+      - moneothingrawdatas
+  /moneothings:
+    post:
+      consumes:
+      - application/json
+      description: get moneothing
+      parameters:
+      - description: get a moneothing
+        in: body
+        name: moneothingsearchdto
+        required: true
+        schema:
+          $ref: '#/definitions/postgres_api.moneothingsearchdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postgres_api.moneothing'
+      summary: get moneothing
+      tags:
+      - moneothingrawdatas
+  /moneothings/all:
+    get:
+      consumes:
+      - application/json
+      description: get all moneothings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/postgres_api.moneothing'
+            type: array
+      summary: Get all moneothings
+      tags:
+      - moneothings
+  /moneothingwithrawdatas/timerange:
+    post:
+      consumes:
+      - application/json
+      description: get values for moneothing
+      parameters:
+      - description: Rawdatas for timerange
+        in: body
+        name: moneothingrawdatatimerangedto
+        required: true
+        schema:
+          $ref: '#/definitions/main.moneothingrawdatatimerangedto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
+      summary: get values for moneothing in given timerange
+      tags:
+      - moneothingwitrawdatas
+  /moneothingwithrawdatas/timestamp:
+    post:
+      consumes:
+      - application/json
+      description: get values for moneothing
+      parameters:
+      - description: Rawdata next to timerange
+        in: body
+        name: moneothingrawdatatimestampdto
+        required: true
+        schema:
+          $ref: '#/definitions/main.moneothingrawdatatimestampdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
+      summary: get values for moneothing at timestamp
+      tags:
+      - moneothingwitrawdatas
   /rawdatas:
     post:
       consumes:
       - application/json
       description: get rawdatas by value
       parameters:
-      - description: Add account
+      - description: Get rawdatas
         in: body
         name: valuesearchdto
         required: true
@@ -206,5 +327,5 @@ paths:
             type: array
       summary: Show rawdatas
       tags:
-      - accounts
+      - rawdatas
 swagger: "2.0"

@@ -4,6 +4,44 @@
         "contact": {}
     },
     "paths": {
+        "/moneothingrawdatas/insert": {
+            "post": {
+                "description": "Insert data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moneothingrawdatas"
+                ],
+                "summary": "Insert data",
+                "parameters": [
+                    {
+                        "description": "Insert data",
+                        "name": "valueseinsertrelationdtoarchdto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.insertrelationdto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int64"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/moneothingrawdatas/timerange": {
             "post": {
                 "description": "get moneothing by value",
@@ -125,7 +163,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "moneothingrawdatas"
+                    "moneothings"
                 ],
                 "summary": "get moneothing",
                 "parameters": [
@@ -282,6 +320,32 @@
         }
     },
     "definitions": {
+        "main.insertrelationdto": {
+            "type": "object",
+            "properties": {
+                "bulkinsert": {
+                    "type": "boolean"
+                },
+                "numberofdatasets": {
+                    "type": "integer"
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "main.moneothing": {
             "type": "object",
             "properties": {
