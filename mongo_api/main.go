@@ -424,7 +424,7 @@ func main() {
 	}
 	fmt.Println("Successfully connected to Mongo!")
 
-	insertData(db)
+	insertData(db, true)
 
 	// programmatically set swagger info
 	docs.SwaggerInfo.Title = "Mongo API"
@@ -468,7 +468,7 @@ func main() {
 	router.Run(":4242")
 }
 
-func insertData(db *mongo.Client) {
+func insertData(db *mongo.Client, bulk bool) {
 	now := time.Now()
 	log.Println("----> Starting insertion of data at: ", now)
 	collection := db.Database("processdata").Collection("moneothing")
@@ -558,24 +558,42 @@ func insertData(db *mongo.Client) {
 	var operations []mongo.WriteModel
 	starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
 
-	for i := actualCount + 1; i < 5000000; i++ {
-		var moneothingrawdata = moneothingrawdata{
-			Id:        int64(i),
-			ThingId:   moneothingIds[i%3],
-			RawDataId: rand.Int63n(1000),
-			TimeStamp: starttime.UnixMilli(),
-		}
-		doc, err := toDoc(moneothingrawdata)
-		starttime = starttime.Add(time.Second)
-		operation := mongo.NewInsertOneModel().SetDocument(doc)
-		operations = append(operations, operation)
+	if bulk {
+		for i := actualCount + 1; i < 5000000; i++ {
+			var moneothingrawdata = moneothingrawdata{
+				Id:        int64(i),
+				ThingId:   moneothingIds[i%3],
+				RawDataId: rand.Int63n(1000),
+				TimeStamp: starttime.UnixMilli(),
+			}
+			doc, err := toDoc(moneothingrawdata)
+			starttime = starttime.Add(time.Second)
+			operation := mongo.NewInsertOneModel().SetDocument(doc)
+			operations = append(operations, operation)
 
-		if i%10000 == 0 {
-			collection.BulkWrite(context.TODO(), operations)
-			operations = nil
+			if i%10000 == 0 {
+				collection.BulkWrite(context.TODO(), operations)
+				operations = nil
+			}
+			if err != nil {
+				panic(err)
+			}
 		}
-		if err != nil {
-			panic(err)
+	} else {
+		for i := actualCount + 1; i < 5000000; i++ {
+			var moneothingrawdata = moneothingrawdata{
+				Id:        int64(i),
+				ThingId:   moneothingIds[i%3],
+				RawDataId: rand.Int63n(100),
+				TimeStamp: time.Now().UTC().UnixMilli(),
+			}
+			doc, err := toDoc(moneothingrawdata)
+			res, err := collection.InsertOne(context.Background(), doc)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println("New record ID is:", i, res.InsertedID)
 		}
 	}
 	after := time.Now()

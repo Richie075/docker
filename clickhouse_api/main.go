@@ -370,7 +370,7 @@ func main() {
 		panic(err)
 	}
 	log.SetOutput(f)
-	insertData()
+	insertData(true)
 	//db, err := connectDB()
 	//if err != nil {
 	//panic(err)
@@ -389,7 +389,7 @@ func main() {
 	router.Run("localhost:4243")
 }
 
-func insertData() {
+func insertData(bulk bool) {
 	db, err := connectDB()
 	ctx := context.Background()
 	now := time.Now()
@@ -446,26 +446,36 @@ func insertData() {
 			rawDataIds = append(rawDataIds, int64(i))
 		}
 	}
+	if bulk {
+		sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES`
+		valuestatement := `(%d,%d,%d, %d)`
+		var actualCount int64
+		var insertstring []string
+		var buffer bytes.Buffer
+		buffer.WriteString(sqlStatement)
+		db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
+		starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
+		for i := actualCount + 1; i < 5000001; i++ {
 
-	sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES`
-	valuestatement := `(%d,%d,%d, %d)`
-	var actualCount int64
-	var insertstring []string
-	var buffer bytes.Buffer
-	buffer.WriteString(sqlStatement)
-	db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
-	starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
-	for i := actualCount + 1; i < 5000001; i++ {
-
-		insertQuery := fmt.Sprintf(valuestatement, i, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.UnixMilli())
-		insertstring = append(insertstring, insertQuery)
-		starttime = starttime.Add(time.Second)
-		if i%10000 == 0 {
-			buffer.WriteString(strings.Join(insertstring, ","))
-			db.QueryRow(ctx, buffer.String())
-			insertstring = nil
-			buffer.Reset()
-			buffer.WriteString(sqlStatement)
+			insertQuery := fmt.Sprintf(valuestatement, i, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.UnixMilli())
+			insertstring = append(insertstring, insertQuery)
+			starttime = starttime.Add(time.Second)
+			if i%10000 == 0 {
+				buffer.WriteString(strings.Join(insertstring, ","))
+				db.QueryRow(ctx, buffer.String())
+				insertstring = nil
+				buffer.Reset()
+				buffer.WriteString(sqlStatement)
+			}
+		}
+	} else {
+		sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES (%d,%d, %d, %d)`
+		var actualCount int64
+		db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
+		for i := actualCount + 1; i < 5000000; i++ {
+			insertQuery := fmt.Sprintf(sqlStatement, i, moneothingIds[i%3], rand.Int63n(100)+1, time.Now().UnixMilli())
+			db.QueryRow(ctx, insertQuery)
+			fmt.Println("New record ID is:", i)
 		}
 	}
 	after := time.Now()

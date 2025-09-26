@@ -678,7 +678,7 @@ func main() {
 	boil.SetDB(db)
 
 	//selectMoneoThingsWithRawData(ctx, "380035ab-9190-4c75-a251-fbeb53dc0cb5")
-	insertData()
+	insertData(true)
 	//ctx := context.Background()
 	/*db := connectDB()
 
@@ -734,7 +734,7 @@ func main() {
 	router.Run(":4241")
 }
 
-func insertData() {
+func insertData(bulk bool) {
 	context.Background()
 	db, err := sql.Open("postgres", "postgres://richie:0NolonopA0@192.168.66.11:5439/processdata?sslmode=disable")
 	if err != nil {
@@ -813,35 +813,55 @@ func insertData() {
 			rawDataIds = append(rawDataIds, id)
 		}
 	}
+	if bulk {
+		sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES `
+		valuestatement := `(%d,%d,'%s')`
+		id = 0
+		var actualCount int64
+		var insertstring []string
+		var buffer bytes.Buffer
+		err = db.QueryRow("SELECT COUNT(*) FROM public.moneothingrawdata").Scan(&actualCount)
 
-	sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES `
-	valuestatement := `(%d,%d,'%s')`
-	id = 0
-	var actualCount int64
-	var insertstring []string
-	var buffer bytes.Buffer
-	err = db.QueryRow("SELECT COUNT(*) FROM public.moneothingrawdata").Scan(&actualCount)
+		starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
+		buffer.WriteString(sqlStatement)
+		if err != nil {
+			panic(err)
+		}
+		upperBound := 5000000 - actualCount
+		for i := 1; i < int(upperBound)+1; i++ {
 
-	starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
-	buffer.WriteString(sqlStatement)
-	if err != nil {
-		panic(err)
-	}
-	upperBound := 5000000 - actualCount
-	for i := 1; i < int(upperBound)+1; i++ {
+			insertQuery := fmt.Sprintf(valuestatement, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.Format(time.RFC3339))
+			insertstring = append(insertstring, insertQuery)
+			starttime = starttime.Add(time.Second)
+			if i%10000 == 0 {
+				buffer.WriteString(strings.Join(insertstring, ","))
+				query, err := db.Query(buffer.String())
+				insertstring = nil
+				buffer.Reset()
+				buffer.WriteString(sqlStatement)
+				if err != nil {
+					panic(err)
+				}
+				query.Close()
+			}
+		}
+	} else {
+		sqlStatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')`
+		id = 0
+		var actualCount int64
+		err = db.QueryRow("SELECT COUNT(*) FROM public.moneothingrawdata").Scan(&actualCount)
+		if err != nil {
+			panic(err)
+		}
+		upperBound := 5000000 - actualCount
+		for i := 0; i < int(upperBound); i++ {
 
-		insertQuery := fmt.Sprintf(valuestatement, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.Format(time.RFC3339))
-		insertstring = append(insertstring, insertQuery)
-		starttime = starttime.Add(time.Second)
-		if i%10000 == 0 {
-			buffer.WriteString(strings.Join(insertstring, ","))
-			query, err := db.Query(buffer.String())
-			insertstring = nil
-			buffer.Reset()
-			buffer.WriteString(sqlStatement)
+			insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i%3], rand.Int63n(100)+1, time.Now().Format(time.RFC3339))
+			query, err := db.Query(insertQuery)
 			if err != nil {
 				panic(err)
 			}
+			fmt.Println("Inserted:", i)
 			query.Close()
 		}
 	}
