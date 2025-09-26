@@ -324,7 +324,7 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 		log.Println(err)
 	}
 	now := time.Now()
-	log.Printf("----> Starting getMoneoThingRawDataByTimeStamp at: %s", now.Format(time.RFC3339))
+	log.Printf("----> Starting getMoneoThingRawDataByTimeStamp at: %s", now.Format(time.DateTime))
 	db, err := connectDB()
 	if err != nil {
 		panic(err)
@@ -333,7 +333,7 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
 	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
 
-	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE  thingid = '%s' AND uniqueidentifier = '%s' timestamp <= parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY`, body.ThingId, body.UniqueIdentifier, body.Time)
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE  thingid = '%s' AND uniqueidentifier = '%s' AND timestamp <= toDateTime('%s') ORDER BY timestamp DESC LIMIT 1`, body.ThingId, body.UniqueIdentifier, body.Time.Format(time.DateTime))
 	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(), sqlstatement)
 	log.Printf("Executed query: %s\n", sqlstatement)
