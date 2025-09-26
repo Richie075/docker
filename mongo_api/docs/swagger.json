@@ -32,10 +32,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.moneothingwithvalue"
-                            }
+                            "$ref": "#/definitions/main.moneothingwithvaluesviewmodel"
                         }
                     }
                 }
@@ -69,10 +66,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.moneothingwithvalue"
-                            }
+                            "$ref": "#/definitions/main.moneothingwithvaluesviewmodel"
                         }
                     }
                 }
@@ -277,22 +271,22 @@
                 }
             }
         },
-        "main.moneothingwithvalue": {
+        "main.moneothingwithvaluesviewmodel": {
             "type": "object",
             "properties": {
                 "displayname": {
                     "type": "string"
                 },
+                "rawdatas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.valuewithtimestampviewmodel"
+                    }
+                },
                 "thingid": {
                     "type": "string"
                 },
-                "timestamp": {
-                    "type": "string"
-                },
                 "uniqueidentifier": {
-                    "type": "string"
-                },
-                "value": {
                     "type": "string"
                 }
             }
@@ -333,6 +327,17 @@
                 },
                 "pagesize": {
                     "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.valuewithtimestampviewmodel": {
+            "type": "object",
+            "properties": {
+                "timestamp": {
+                    "type": "string"
                 },
                 "value": {
                     "type": "string"

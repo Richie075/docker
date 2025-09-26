@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"clickhouse_api/docs"
 	"context"
 	"fmt"
 	"log"
@@ -17,6 +18,8 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type moneothing struct {
@@ -33,6 +36,11 @@ type rawdata struct {
 	Data  []moneothingrawdata `json:"Data"`
 }
 
+type rawdataviewmodel struct {
+	Id    int64  `json:"id"`
+	Value string `json:"value"`
+}
+
 type moneothingrawdata struct {
 	Id         int64      `json:"id"`
 	ThingId    int64      `json:"thingid"`
@@ -40,6 +48,33 @@ type moneothingrawdata struct {
 	TimeStamp  time.Time  `json:"timestamp"`
 	Rawdata    rawdata    `json:"rawdata"`
 	MoneoThing moneothing `json:"moneothing"`
+}
+
+type moneothingwithvaluesviewmodel struct {
+	ThingId          uuid.UUID                     `json:"thingid"`
+	UniqueIdentifier string                        `json:"uniqueidentifier"`
+	DisplayName      string                        `json:"displayname"`
+	Rawdatas         []valuewithtimestampviewmodel `json:"rawdatas"`
+}
+
+type valuewithtimestampviewmodel struct {
+	Value     string    `json:"value"`
+	TimeStamp time.Time `json:"timestamp"`
+}
+
+type moneothingrawdatatimerangedto struct {
+	ThingId          uuid.UUID `json:"thingid"`
+	UniqueIdentifier string    `json:"uniqueidentifier"`
+	FromTime         time.Time `json:"fromtime"`
+	ToTime           time.Time `json:"totime"`
+	PageNumber       int       `json:"pagenumber"`
+	PageSize         int       `json:"pagesize"`
+}
+
+type moneothingrawdatatimestampdto struct {
+	ThingId          uuid.UUID `json:"thingid"`
+	UniqueIdentifier string    `json:"uniqueidentifier"`
+	Time             time.Time `json:"time"`
 }
 
 var moneothingsDefault = []moneothing{
@@ -96,6 +131,14 @@ type moneothingsearchdto struct {
 	PageSize         int       `json:"pagesize"`
 }
 
+// Moneothings godoc
+// @Summary      Get all moneothings
+// @Description  get all moneothings
+// @Tags         moneothings
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  []moneothing
+// @Router       /moneothings/all [get]
 func getMoneoThings(c *gin.Context) {
 	now := time.Now()
 	log.Printf("----> Starting getMoneoThings at: %s", now.Format(time.RFC3339))
@@ -125,6 +168,15 @@ func getMoneoThings(c *gin.Context) {
 	log.Printf("----> Finished getMoneoThings at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
+// Get moneothing godoc
+// @Summary      get moneothing
+// @Description  get moneothing
+// @Tags         moneothings
+// @Accept       json
+// @Produce      json
+// @Param		 moneothingsearchdto	body		moneothingsearchdto	true	"get a moneothing"
+// @Success      200  {object}  moneothing
+// @Router       /moneothings [post]
 func getMoneoThingByIdAndUnique(c *gin.Context) {
 	var body moneothingsearchdto
 	if err := c.BindJSON(&body); err != nil {
@@ -163,6 +215,15 @@ func getMoneoThingByIdAndUnique(c *gin.Context) {
 	log.Printf("----> Finished getMoneoThingByIdAndUnique at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
+// Get moneothing godoc
+// @Summary      get moneothing
+// @Description  get moneothing by value
+// @Tags         moneothingrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 valuesearchdto	body		valuesearchdto	true	"get moneothing by value"
+// @Success      200  {object}  []moneothingwithvalue
+// @Router       /moneothingrawdatas/value [post]
 func getMoneoThingByValue(c *gin.Context) {
 	var body valuesearchdto
 	if err := c.BindJSON(&body); err != nil {
@@ -201,6 +262,15 @@ func getMoneoThingByValue(c *gin.Context) {
 	log.Printf("----> Finished getMoneoThingByValue at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
+// ShowRawdata godoc
+// @Summary      Show rawdatas
+// @Description  get rawdatas by value
+// @Tags         rawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 valuesearchdto	body		valuesearchdto	true	"Get rawdatas"
+// @Success      200  {object}  []rawdataviewmodel
+// @Router       /rawdatas [post]
 func getRawDataByValue(c *gin.Context) {
 	var body valuesearchdto
 	if err := c.BindJSON(&body); err != nil {
@@ -239,8 +309,17 @@ func getRawDataByValue(c *gin.Context) {
 	log.Printf("----> Finished getRawDataByValue at: %s, Duration: %d ms\n", after, dur)
 }
 
+// Get values for moneothing godoc
+// @Summary      get values for moneothing at timestamp
+// @Description  get values for moneothing
+// @Tags         moneothingwitrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 moneothingrawdatatimestampdto	body		moneothingrawdatatimestampdto	true	"Rawdata next to timerange"
+// @Success      200  {object}  moneothingwithvaluesviewmodel
+// @Router       /moneothingwithrawdatas/timestamp [post]
 func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
-	var body timestampsearchdto
+	var body moneothingrawdatatimestampdto
 	if err := c.BindJSON(&body); err != nil {
 		log.Println(err)
 	}
@@ -251,14 +330,10 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 		panic(err)
 	}
 
-	var moneothingrawdatas []moneothingwithvalue
-	var operator string
-	if body.Lower {
-		operator = `<=`
-	} else {
-		operator = `>=`
-	}
-	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE timestamp %s parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, operator, body.Time, body.PageNumber*body.PageSize, body.PageSize)
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
+
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE  thingid = '%s' AND uniqueidentifier = '%s' timestamp <= parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY`, body.ThingId, body.UniqueIdentifier, body.Time)
 	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(), sqlstatement)
 	log.Printf("Executed query: %s\n", sqlstatement)
@@ -267,36 +342,47 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 		panic(err)
 	}
 	for rows.Next() {
-		var moneothingwithvalue moneothingwithvalue
-		err = rows.Scan(&moneothingwithvalue.ThingId, &moneothingwithvalue.UniqueIdentifier, &moneothingwithvalue.DisplayName, &moneothingwithvalue.Value, &moneothingwithvalue.TimeStamp)
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		err = rows.Scan(&moneothingwithvaluesviewmodel.ThingId, &moneothingwithvaluesviewmodel.UniqueIdentifier, &moneothingwithvaluesviewmodel.DisplayName, &valuewithtimestampviewmodel.Value, &valuewithtimestampviewmodel.TimeStamp)
 		if err != nil {
 			panic(err)
 		}
-		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
 	}
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
 	rows.Close()
 
-	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
+	c.IndentedJSON(http.StatusCreated, moneothingwithvaluesviewmodel)
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Printf("----> Finished getMoneoThingRawDataByTimeStamp at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
+// Get values for moneothing godoc
+// @Summary      get values for moneothing in given timerange
+// @Description  get values for moneothing
+// @Tags         moneothingwitrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 moneothingrawdatatimerangedto	body		moneothingrawdatatimerangedto	true	"Rawdatas for timerange"
+// @Success      200  {object}  moneothingwithvaluesviewmodel
+// @Router       /moneothingwithrawdatas/timerange [post]
 func getMoneoThingRawDataByTimeRange(c *gin.Context) {
-	var body timestamprangesearchdto
+	var body moneothingrawdatatimerangedto
 	if err := c.BindJSON(&body); err != nil {
 		log.Println(err)
 	}
 	now := time.Now()
-	log.Printf("----> Starting getMoneoThingRawDataByTimeRange at: %s\n", now.Format(time.RFC3339))
+	log.Printf("----> Starting getMoneoThingRawDataByTimeRange at: %s\n", now.Format(time.DateTime))
 	db, err := connectDB()
 	if err != nil {
 		panic(err)
 	}
 
-	var moneothingrawdatas []moneothingwithvalue
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
 
-	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE timestamp >= parseDateTimeBestEffort('%s') AND timestamp <= parseDateTimeBestEffort('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.From, body.To, body.PageNumber*body.PageSize, body.PageSize)
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE thingid = '%s' AND uniqueidentifier = '%s' AND timestamp >= toDateTime('%s') AND timestamp <= toDateTime('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.ThingId, body.UniqueIdentifier, body.FromTime.Format(time.DateTime), body.ToTime.Format(time.DateTime), body.PageNumber*body.PageSize, body.PageSize)
 	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(context.Background(), sqlstatement)
 	log.Printf("Executed query: %s\n", sqlstatement)
@@ -305,16 +391,17 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 		panic(err)
 	}
 	for rows.Next() {
-		var moneothingwithvalue moneothingwithvalue
-		err = rows.Scan(&moneothingwithvalue.ThingId, &moneothingwithvalue.UniqueIdentifier, &moneothingwithvalue.DisplayName, &moneothingwithvalue.Value, &moneothingwithvalue.TimeStamp)
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		err = rows.Scan(&moneothingwithvaluesviewmodel.ThingId, &moneothingwithvaluesviewmodel.UniqueIdentifier, &moneothingwithvaluesviewmodel.DisplayName, &valuewithtimestampviewmodel.Value, &valuewithtimestampviewmodel.TimeStamp)
 		if err != nil {
 			panic(err)
 		}
-		moneothingrawdatas = append(moneothingrawdatas, moneothingwithvalue)
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
 	}
 	rows.Close()
 
-	c.IndentedJSON(http.StatusCreated, moneothingrawdatas)
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
+	c.IndentedJSON(http.StatusCreated, moneothingwithvaluesviewmodel)
 	after := time.Now()
 	dur := after.Sub(now)
 	log.Printf("----> Finished getMoneoThingRawDataByTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
@@ -379,14 +466,40 @@ func main() {
 	//insertData(db, context.Background())
 	//defer db.Close()
 
+	docs.SwaggerInfo.Title = "Clickhouse API"
+	docs.SwaggerInfo.Description = "This is a sample server clickhouse api server."
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:4243"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
 	router := gin.Default()
-	router.GET("/moneothings", getMoneoThings)
-	router.POST("/rawdatas", getRawDataByValue)
-	router.POST("/moneothingrawdata/thing", getMoneoThingByIdAndUnique)
-	router.POST("/moneothingrawdata/value", getMoneoThingByValue)
-	router.POST("/moneothingrawdata/timestamp", getMoneoThingRawDataByTimeStamp)
-	router.POST("/moneothingrawdata/timerange", getMoneoThingRawDataByTimeRange)
-	router.Run("localhost:4243")
+
+	v1 := router.Group("/api/v1")
+	{
+		rawdatas := v1.Group("/rawdatas")
+		{
+			rawdatas.POST("", getRawDataByValue)
+		}
+		moneothings := v1.Group("/moneothings")
+		{
+			moneothings.GET("all", getMoneoThings)
+			//moneothings.POST("", getMoneoThingByIdAndUnique)
+		}
+		moneothingrawdatas := v1.Group("/moneothingwithrawdatas")
+		{
+			moneothingrawdatas.POST("thing", getMoneoThingByIdAndUnique)
+			moneothingrawdatas.POST("value", getMoneoThingByValue)
+			moneothingrawdatas.POST("timestamp", getMoneoThingRawDataByTimeStamp)
+			moneothingrawdatas.POST("timerange", getMoneoThingRawDataByTimeRange)
+
+			//moneothingrawdatas.POST("insert", insertRelations)
+		}
+	}
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	router.Run(":4243")
 }
 
 func insertData(bulk bool) {
@@ -416,14 +529,16 @@ func insertData(bulk bool) {
 	if err != nil {
 		panic(err)
 	}
-	var rawDataIds []int64
+	var rawdataids []int64
+	var rawDatasFromDb []rawdata
 	for rows.Next() {
 		var rawdata rawdata
 		err = rows.Scan(&rawdata.Id, &rawdata.Value)
 		if err != nil {
 			panic(err)
 		}
-		rawDataIds = append(rawDataIds, rawdata.Id)
+		rawDatasFromDb = append(rawDatasFromDb, rawdata)
+		rawdataids = append(rawdataids, rawdata.Id)
 		// Process each row
 	}
 
@@ -437,27 +552,27 @@ func insertData(bulk bool) {
 		}
 	}
 	sqlStatement = `INSERT INTO processdata.rawdata (id, value) VALUES ('%d','%s')`
-	if len(rawdatas) == 0 {
+	if len(rawDatasFromDb) == 0 {
 		for i := 0; i < 1000; i++ {
 			var rawdata = new(rawdata)
 			rawdata.Value = strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
 			insertQuery := fmt.Sprintf(sqlStatement, i+1, rawdata.Value)
 			db.QueryRow(ctx, insertQuery)
-			rawDataIds = append(rawDataIds, int64(i))
+			rawdataids = append(rawdataids, int64(i))
 		}
 	}
 	if bulk {
 		sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES`
-		valuestatement := `(%d,%d,%d, %d)`
+		valuestatement := `(%d,%d,%d, '%s')`
 		var actualCount int64
 		var insertstring []string
 		var buffer bytes.Buffer
 		buffer.WriteString(sqlStatement)
-		db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
+		db.QueryRow(ctx, "SELECT id FROM processdata.moneothingrawdata ORDER BY id DESC LIMIT 1").Scan(&actualCount)
+
 		starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
 		for i := actualCount + 1; i < 5000001; i++ {
-
-			insertQuery := fmt.Sprintf(valuestatement, i, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.UnixMilli())
+			insertQuery := fmt.Sprintf(valuestatement, i, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.Format(time.DateTime))
 			insertstring = append(insertstring, insertQuery)
 			starttime = starttime.Add(time.Second)
 			if i%10000 == 0 {
@@ -471,7 +586,7 @@ func insertData(bulk bool) {
 	} else {
 		sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES (%d,%d, %d, %d)`
 		var actualCount int64
-		db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
+		db.QueryRow(ctx, "SELECT id FROM processdata.moneothingrawdata ORDER BY id DESC LIMIT 1").Scan(&actualCount)
 		for i := actualCount + 1; i < 5000000; i++ {
 			insertQuery := fmt.Sprintf(sqlStatement, i, moneothingIds[i%3], rand.Int63n(100)+1, time.Now().UnixMilli())
 			db.QueryRow(ctx, insertQuery)

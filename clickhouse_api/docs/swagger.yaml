@@ -27,7 +27,7 @@ definitions:
       thingid:
         type: integer
       timestamp:
-        type: integer
+        type: string
     type: object
   main.moneothingrawdatatimerangedto:
     properties:
@@ -62,6 +62,19 @@ definitions:
       thingid:
         type: string
       uniqueidentifier:
+        type: string
+    type: object
+  main.moneothingwithvalue:
+    properties:
+      displayname:
+        type: string
+      thingid:
+        type: string
+      timestamp:
+        type: string
+      uniqueidentifier:
+        type: string
+      value:
         type: string
     type: object
   main.moneothingwithvaluesviewmodel:
@@ -114,47 +127,27 @@ definitions:
 info:
   contact: {}
 paths:
-  /moneothingrawdatas/timerange:
+  /moneothingrawdatas/value:
     post:
       consumes:
       - application/json
       description: get moneothing by value
       parameters:
-      - description: get moneothing with rawdata by timerange
+      - description: get moneothing by value
         in: body
-        name: moneothingrawdatatimerangedto
+        name: valuesearchdto
         required: true
         schema:
-          $ref: '#/definitions/main.moneothingrawdatatimerangedto'
+          $ref: '#/definitions/main.valuesearchdto'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
-      summary: get moneothing with rawdata
-      tags:
-      - moneothingrawdatas
-  /moneothingrawdatas/timestamp:
-    post:
-      consumes:
-      - application/json
-      description: get moneothing by timestamp
-      parameters:
-      - description: get moneothing by timestamp
-        in: body
-        name: moneothingrawdatatimestampdto
-        required: true
-        schema:
-          $ref: '#/definitions/main.moneothingrawdatatimestampdto'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
+            items:
+              $ref: '#/definitions/main.moneothingwithvalue'
+            type: array
       summary: get moneothing
       tags:
       - moneothingrawdatas
@@ -197,6 +190,50 @@ paths:
       summary: Get all moneothings
       tags:
       - moneothings
+  /moneothingwithrawdatas/timerange:
+    post:
+      consumes:
+      - application/json
+      description: get values for moneothing
+      parameters:
+      - description: Rawdatas for timerange
+        in: body
+        name: moneothingrawdatatimerangedto
+        required: true
+        schema:
+          $ref: '#/definitions/main.moneothingrawdatatimerangedto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
+      summary: get values for moneothing in given timerange
+      tags:
+      - moneothingwitrawdatas
+  /moneothingwithrawdatas/timestamp:
+    post:
+      consumes:
+      - application/json
+      description: get values for moneothing
+      parameters:
+      - description: Rawdata next to timerange
+        in: body
+        name: moneothingrawdatatimestampdto
+        required: true
+        schema:
+          $ref: '#/definitions/main.moneothingrawdatatimestampdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
+      summary: get values for moneothing at timestamp
+      tags:
+      - moneothingwitrawdatas
   /rawdatas:
     post:
       consumes:

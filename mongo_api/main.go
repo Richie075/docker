@@ -99,6 +99,18 @@ type moneothingrawdatatimestampdto struct {
 	Time             time.Time `json:"time"`
 }
 
+type moneothingwithvaluesviewmodel struct {
+	ThingId          uuid.UUID                     `json:"thingid"`
+	UniqueIdentifier string                        `json:"uniqueidentifier"`
+	DisplayName      string                        `json:"displayname"`
+	Rawdatas         []valuewithtimestampviewmodel `json:"rawdatas"`
+}
+
+type valuewithtimestampviewmodel struct {
+	Value     string    `json:"value"`
+	TimeStamp time.Time `json:"timestamp"`
+}
+
 var moneothings = []moneothing{
 	{Id: 1, ThingId: uuid.New(), UniqueIdentifier: "Unique1", DisplayName: "Temperature1"},
 	{Id: 2, ThingId: uuid.New(), UniqueIdentifier: "Unique2", DisplayName: "Temperature2"},
@@ -233,7 +245,7 @@ func getRawDataByValue(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param		 moneothingrawdatatimerangedto	body		moneothingrawdatatimerangedto	true	"get moneothing with rawdata by timerange"
-// @Success      200  {object}  []moneothingwithvalue
+// @Success      200  {object}  moneothingwithvaluesviewmodel
 // @Router       /moneothingrawdatas/timerange [post]
 func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	var body moneothingrawdatatimerangedto
@@ -265,7 +277,20 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	if err = cur.All(context.Background(), &results); err != nil {
 		log.Fatal(err)
 	}
-
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	moneothingwithvaluesviewmodel.ThingId = results[0].ThingId
+	moneothingwithvaluesviewmodel.UniqueIdentifier = results[0].UniqueIdentifier
+	moneothingwithvaluesviewmodel.DisplayName = results[0].DisplayName
+	//moneothingwithvaluesviewmodel.TimeStamp = results[0].TimeStamp
+	//
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
+	for _, v := range results {
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		valuewithtimestampviewmodel.Value = v.Value
+		valuewithtimestampviewmodel.TimeStamp = v.TimeStamp
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
+	}
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
 	c.IndentedJSON(http.StatusOK, results)
 
 	after := time.Now()
@@ -280,7 +305,7 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param		 moneothingrawdatatimestampdto	body		moneothingrawdatatimestampdto	true	"get moneothing by timestamp"
-// @Success      200  {object}  []moneothingwithvalue
+// @Success      200  {object}  moneothingwithvaluesviewmodel
 // @Router       /moneothingrawdatas/timestamp [post]
 func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	var body moneothingrawdatatimestampdto
@@ -309,8 +334,21 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 	if err = cur.All(context.Background(), &results); err != nil {
 		log.Fatal(err)
 	}
-
-	c.IndentedJSON(http.StatusOK, results)
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	moneothingwithvaluesviewmodel.ThingId = results[0].ThingId
+	moneothingwithvaluesviewmodel.UniqueIdentifier = results[0].UniqueIdentifier
+	moneothingwithvaluesviewmodel.DisplayName = results[0].DisplayName
+	//moneothingwithvaluesviewmodel.TimeStamp = results[0].TimeStamp
+	//
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
+	for _, v := range results {
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		valuewithtimestampviewmodel.Value = v.Value
+		valuewithtimestampviewmodel.TimeStamp = v.TimeStamp
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
+	}
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
+	c.IndentedJSON(http.StatusOK, moneothingwithvaluesviewmodel)
 
 	after := time.Now()
 	dur := after.Sub(now)
