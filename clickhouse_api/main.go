@@ -230,47 +230,33 @@ func insertRelations(c *gin.Context) {
 	var insertedids []int64
 	if body.BulkInsert {
 		var buffer bytes.Buffer
-		sqlstatement = `INSERT INTO processdata.moneothingrawdata (id, thingid, rawdataid, timestamp) VALUES`
+		sqlstatement = `INSERT INTO processdata.moneothingrawdata (thingid, rawdataid, timestamp) VALUES`
 		buffer.WriteString(sqlstatement)
-		valuestatement := `('%d', '%d', '%d', '%s')`
+		valuestatement := `('%d', '%d', '%s')`
 		starttime := time.Now().Add(time.Duration(-body.NumberOfDatSets) * time.Second)
-		sqlstatement = fmt.Sprintf(`SELECT max(id) FROM processdata.moneothingrawdata`)
 
-		db.QueryRow(ctx, sqlstatement).Scan(&id)
-		var index = id + 1
 		var insertstring []string
 		for i := 0; i < body.NumberOfDatSets; i++ {
 			randomIndex := rand.Intn(len(rawdataids))
-			insertQuery := fmt.Sprintf(valuestatement, index, thingid, rawdataids[randomIndex], starttime.Format(time.DateTime))
+			insertQuery := fmt.Sprintf(valuestatement, thingid, rawdataids[randomIndex], starttime.Format(time.DateTime))
 			insertstring = append(insertstring, insertQuery)
 			starttime = starttime.Add(time.Second)
-			insertedids = append(insertedids, index)
-			index = index + 1
-
 		}
 		buffer.WriteString(strings.Join(insertstring, ","))
 		///buffer.WriteString(` returning id`)
 		db.QueryRow(ctx, buffer.String())
 
 	} else {
-		sqlstatement = `INSERT INTO publiprocessdatac.moneothingrawdata (id, thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%d', '%s')`
+		sqlstatement = `INSERT INTO processdata.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')`
 		starttime := time.Now().Add(time.Duration(-body.NumberOfDatSets) * time.Second)
-		sqlstatement = fmt.Sprintf(`SELECT (max(id) FROM processdata.moneothingrawdata`)
-		db.QueryRow(ctx, sqlstatement).Scan(&id)
-		var index = id + 1
+
 		for i := 0; i < body.NumberOfDatSets; i++ {
 			randomIndex := rand.Intn(len(rawdataids))
-			insertQuery := fmt.Sprintf(sqlstatement, index, thingid, rawdataids[randomIndex], starttime.Format(time.RFC3339))
+			insertQuery := fmt.Sprintf(sqlstatement, thingid, rawdataids[randomIndex], starttime.Format(time.DateTime))
 
 			starttime = starttime.Add(time.Second)
-			err := db.QueryRow(ctx, insertQuery)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("Inserted:", index)
+			db.QueryRow(ctx, insertQuery)
 
-			insertedids = append(insertedids, index)
-			index = index + 1
 		}
 	}
 	c.IndentedJSON(http.StatusOK, insertedids)
@@ -605,7 +591,7 @@ func main() {
 		panic(err)
 	}
 	log.SetOutput(f)
-	insertData(true, 50000)
+	insertData(true, 100)
 	//db, err := connectDB()
 	//if err != nil {
 	//panic(err)
@@ -710,17 +696,17 @@ func insertData(bulk bool, bulksize int64) {
 		}
 	}
 	if bulk {
-		sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES`
-		valuestatement := `(%d,%d,%d, '%s')`
-		var actualCount int64
+		sqlStatement = `INSERT INTO processdata.moneothingrawdata (thingid, rawdataid, timestamp) VALUES`
+		valuestatement := `(%d,%d, '%s')`
+		var actualCount uint64
 		var insertstring []string
 		var buffer bytes.Buffer
 		buffer.WriteString(sqlStatement)
-		db.QueryRow(ctx, "SELECT id FROM processdata.moneothingrawdata ORDER BY id DESC LIMIT 1").Scan(&actualCount)
+		db.QueryRow(ctx, "SELECT COUNT(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
 
 		starttime := time.Now().Add(time.Duration(-5000000) * time.Second)
-		for i := actualCount + 1; i < 5000001; i++ {
-			insertQuery := fmt.Sprintf(valuestatement, i, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.Format(time.DateTime))
+		for i := int64(actualCount) + 1; i < 5000001; i++ {
+			insertQuery := fmt.Sprintf(valuestatement, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.Format(time.DateTime))
 			insertstring = append(insertstring, insertQuery)
 			starttime = starttime.Add(time.Second)
 			if i%bulksize == 0 {
@@ -732,11 +718,11 @@ func insertData(bulk bool, bulksize int64) {
 			}
 		}
 	} else {
-		sqlStatement = `INSERT INTO processdata.moneothingrawdata (id,thingid, rawdataid, timestamp) VALUES (%d,%d, %d, %d)`
+		sqlStatement = `INSERT INTO processdata.moneothingrawdata (thingid, rawdataid, timestamp) VALUES (%d, %d, %d)`
 		var actualCount int64
-		db.QueryRow(ctx, "SELECT id FROM processdata.moneothingrawdata ORDER BY id DESC LIMIT 1").Scan(&actualCount)
+		db.QueryRow(ctx, "SELECT Count(*) FROM processdata.moneothingrawdata").Scan(&actualCount)
 		for i := actualCount + 1; i < 5000000; i++ {
-			insertQuery := fmt.Sprintf(sqlStatement, i, moneothingIds[i%3], rand.Int63n(100)+1, time.Now().UnixMilli())
+			insertQuery := fmt.Sprintf(sqlStatement, moneothingIds[i%3], rand.Int63n(100)+1, time.Now().UnixMilli())
 			db.QueryRow(ctx, insertQuery)
 			fmt.Println("New record ID is:", i)
 		}

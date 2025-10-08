@@ -149,7 +149,7 @@ type insertrelationdto struct {
 // @Accept       json
 // @Produce      json
 // @Param		 insertrelationdto	body		insertrelationdto	true	"Insert data"
-// @Success      200  {object}  []int64
+// @Success      200  {object}
 // @Router       /moneothingrawdatas/insert [post]
 func insertRelations(c *gin.Context) {
 	var body insertrelationdto
@@ -168,9 +168,8 @@ func insertRelations(c *gin.Context) {
 
 	join := fmt.Sprintf(`array[%s]`, joinWithQuotes(values))
 	sqlstatement := fmt.Sprintf(`SELECT * FROM public.rawdata WHERE value = ANY(%s)`, join)
-	log.Printf("Executing query: %s\n", sqlstatement)
+
 	rows, err := db.Query(sqlstatement)
-	log.Printf("Executed query: %s\n", sqlstatement)
 
 	if err != nil {
 		panic(err)
@@ -191,11 +190,11 @@ func insertRelations(c *gin.Context) {
 		}
 	}
 
-	sqlstatement = fmt.Sprintf(`INSERT INTO public.rawdata (value) VALUES %s returning id`, joinWithQuotesAndBrackets(values))
-	log.Printf("Executing query: %s\n", sqlstatement)
-	rows, err = db.Query(sqlstatement)
-	log.Printf("Executed query: %s\n", sqlstatement)
+	if len(values) != 0 {
+		sqlstatement = fmt.Sprintf(`INSERT INTO public.rawdata (value) VALUES %s returning id`, joinWithQuotesAndBrackets(values))
 
+		rows, err = db.Query(sqlstatement)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -211,22 +210,19 @@ func insertRelations(c *gin.Context) {
 
 	var thingid int64
 	sqlstatement = fmt.Sprintf(`SELECT id FROM public.moneothing WHERE thingid = '%s' AND uniqueidentifier = '%s'`, body.ThingId, body.UniqueIdentifier)
-	log.Printf("Executing query: %s\n", sqlstatement)
+
 	db.QueryRow(sqlstatement).Scan(&thingid)
-	log.Printf("Executed query: %s\n", sqlstatement)
 	if thingid == 0 {
 		sqlstatement = fmt.Sprintf(`INSERT INTO public.moneothing (thingid, uniqueidentifier, displayname) VALUES('%s', '%s', '%s')`, body.ThingId, body.UniqueIdentifier, body.UniqueIdentifier)
-		log.Printf("Executing query: %s\n", sqlstatement)
+
 		rows, err = db.Query(sqlstatement)
-		log.Printf("Executed query: %s\n", sqlstatement)
 
 		if err != nil {
 			panic(err)
 		}
 		sqlstatement = fmt.Sprintf(`SELECT id FROM public.moneothing WHERE thingid = '%s' AND uniqueidentifier = '%s'`, body.ThingId, body.UniqueIdentifier)
-		log.Printf("Executing query: %s\n", sqlstatement)
+
 		db.QueryRow(sqlstatement).Scan(&thingid)
-		log.Printf("Executed query: %s\n", sqlstatement)
 	}
 
 	var insertedids []int64
@@ -250,32 +246,16 @@ func insertRelations(c *gin.Context) {
 		if err != nil {
 			panic(err)
 		}
-		for rows.Next() {
-			var insertedid int64
-			err = rows.Scan(&insertedid)
-			if err != nil {
-				panic(err)
-			}
-			insertedids = append(insertedids, insertedid)
-		}
 	} else {
-		sqlstatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s') returning id`
+		sqlstatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s')`
 		starttime := time.Now().Add(time.Duration(-body.NumberOfDatSets) * time.Second)
 
 		for i := 0; i < body.NumberOfDatSets; i++ {
-			var insertedid int64
 			randomIndex := rand.Intn(len(rawdataids))
 			insertQuery := fmt.Sprintf(sqlstatement, thingid, rawdataids[randomIndex], starttime.Format(time.RFC3339))
-			log.Printf("Executing query: %s\n", insertQuery)
-			starttime = starttime.Add(time.Second)
-			err := db.QueryRow(insertQuery).Scan(&insertedid)
-			log.Printf("Executed query: %s\n", insertQuery)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("Inserted:", insertedid)
 
-			insertedids = append(insertedids, insertedid)
+			starttime = starttime.Add(time.Second)
+			db.QueryRow(insertQuery)
 		}
 	}
 	c.IndentedJSON(http.StatusOK, insertedids)
