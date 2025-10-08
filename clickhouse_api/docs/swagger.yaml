@@ -1,4 +1,23 @@
 definitions:
+  main.insertrelationdto:
+    properties:
+      bulkinsert:
+        type: boolean
+      numberofdatasets:
+        type: integer
+      thingid:
+        type: string
+      time:
+        type: string
+      uniqueidentifier:
+        type: string
+      values:
+        items:
+          type: string
+        type: array
+    required:
+    - values
+    type: object
   main.moneothing:
     properties:
       Data:
@@ -190,6 +209,31 @@ paths:
       summary: Get all moneothings
       tags:
       - moneothings
+  /moneothingwithrawdatas/insert:
+    post:
+      consumes:
+      - application/json
+      description: Insert data
+      parameters:
+      - description: Insert data
+        in: body
+        name: insertrelationdto
+        required: true
+        schema:
+          $ref: '#/definitions/main.insertrelationdto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              format: int64
+              type: integer
+            type: array
+      summary: Insert data
+      tags:
+      - moneothingrawdatas
   /moneothingwithrawdatas/timerange:
     post:
       consumes:

@@ -20,7 +20,7 @@
                 "parameters": [
                     {
                         "description": "Insert data",
-                        "name": "valueseinsertrelationdtoarchdto",
+                        "name": "insertrelationdto",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -322,6 +322,9 @@
     "definitions": {
         "main.insertrelationdto": {
             "type": "object",
+            "required": [
+                "values"
+            ],
             "properties": {
                 "bulkinsert": {
                     "type": "boolean"

@@ -31,7 +31,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Insert data",
-                        "name": "valueseinsertrelationdtoarchdto",
+                        "name": "insertrelationdto",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -333,6 +333,9 @@ const docTemplate = `{
     "definitions": {
         "main.insertrelationdto": {
             "type": "object",
+            "required": [
+                "values"
+            ],
             "properties": {
                 "bulkinsert": {
                     "type": "boolean"

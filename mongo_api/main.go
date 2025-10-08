@@ -268,7 +268,7 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	from := body.FromTime.UnixMilli()
 	to := body.ToTime.UnixMilli()
 
-	filter := bson.M{"timestamp": bson.M{"$gte": from, "$lte": to, "thingid": body.ThingId, "uniqueidentifier": body.UniqueIdentifier}}
+	filter := bson.M{"timestamp": bson.M{"$gte": from, "$lte": to}, "thingid": body.ThingId, "uniqueidentifier": body.UniqueIdentifier}
 
 	log.Println("Executing query")
 	cur, err := collection.Find(context.TODO(), filter, pageOptions)
@@ -321,19 +321,22 @@ func getMoneoThingRawDataByTimeStamp(c *gin.Context) {
 
 	collection := db.Database("processdata").Collection("moneothingwithrawdataextended")
 
-	pageOptions := options.Find()
+	pageOptions := options.FindOne()
 	pageOptions.SetSort(bson.D{{"timestamp", -1}}) //0-i
-	pageOptions.SetLimit(int64(1))
 
 	timestamp := body.Time.UnixMilli()
-	filter := bson.M{"timestamp": bson.M{"$lte": timestamp}}
+	filter := bson.M{
+		"thingid":          body.ThingId,
+		"uniqueidentifier": body.UniqueIdentifier,
+		"timestamp":        bson.M{"$lte": timestamp},
+	}
+
+	var result bson.M
 	log.Println("Executing query")
-	cur, err := collection.Find(context.TODO(), filter, pageOptions)
+	collection.FindOne(context.TODO(), filter, pageOptions).Decode(&result)
 	log.Println("Executed query")
 	var results = []moneothingwithvalue{}
-	if err = cur.All(context.Background(), &results); err != nil {
-		log.Fatal(err)
-	}
+
 	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
 	moneothingwithvaluesviewmodel.ThingId = results[0].ThingId
 	moneothingwithvaluesviewmodel.UniqueIdentifier = results[0].UniqueIdentifier
@@ -462,7 +465,7 @@ func main() {
 	}
 	fmt.Println("Successfully connected to Mongo!")
 
-	insertData(db, true)
+	insertData(db, true, 100)
 
 	// programmatically set swagger info
 	docs.SwaggerInfo.Title = "Mongo API"
@@ -506,7 +509,7 @@ func main() {
 	router.Run(":4242")
 }
 
-func insertData(db *mongo.Client, bulk bool) {
+func insertData(db *mongo.Client, bulk bool, bulksize int64) {
 	now := time.Now()
 	log.Println("----> Starting insertion of data at: ", now)
 	collection := db.Database("processdata").Collection("moneothing")
@@ -609,7 +612,7 @@ func insertData(db *mongo.Client, bulk bool) {
 			operation := mongo.NewInsertOneModel().SetDocument(doc)
 			operations = append(operations, operation)
 
-			if i%10000 == 0 {
+			if i%bulksize == 0 {
 				collection.BulkWrite(context.TODO(), operations)
 				operations = nil
 			}

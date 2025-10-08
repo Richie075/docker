@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"postgres_api/docs"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -135,7 +136,7 @@ type moneothingrawdatatimestampdto struct {
 type insertrelationdto struct {
 	ThingId          uuid.UUID `json:"thingid"`
 	UniqueIdentifier string    `json:"uniqueidentifier"`
-	Values           []string  `json:"values"`
+	Values           []string  `json:"values" binding:"required"`
 	Time             time.Time `json:"time"`
 	NumberOfDatSets  int       `json:"numberofdatasets"`
 	BulkInsert       bool      `json:"bulkinsert"`
@@ -147,14 +148,15 @@ type insertrelationdto struct {
 // @Tags         moneothingrawdatas
 // @Accept       json
 // @Produce      json
-// @Param		 valueseinsertrelationdtoarchdto	body		insertrelationdto	true	"Insert data"
+// @Param		 insertrelationdto	body		insertrelationdto	true	"Insert data"
 // @Success      200  {object}  []int64
 // @Router       /moneothingrawdatas/insert [post]
 func insertRelations(c *gin.Context) {
 	var body insertrelationdto
-	if err := c.BindJSON(&body); err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		log.Println(err)
 	}
+
 	now := time.Now()
 	log.Println(fmt.Sprintf("----> Starting insertRelations at: %s, bulkinsert: %t", now.Format(time.RFC3339), body.BulkInsert))
 	db := connectDB()
@@ -164,16 +166,7 @@ func insertRelations(c *gin.Context) {
 
 	values = append(values, body.Values...)
 
-	numberofdatasets := body.NumberOfDatSets - len(body.Values)
-	for i := 0; i < numberofdatasets; i++ {
-		str := strconv.FormatFloat(randFloat(-10.00, 40.00), 'f', -1, 64)
-		values = append(values, str)
-	}
-	var searchvalues []string
-	for _, v := range values {
-		searchvalues = append(searchvalues, fmt.Sprintf(`'%s'`, v))
-	}
-	join := fmt.Sprintf(`array[%s]`, strings.Join(searchvalues, ","))
+	join := fmt.Sprintf(`array[%s]`, joinWithQuotes(values))
 	sqlstatement := fmt.Sprintf(`SELECT * FROM public.rawdata WHERE value = ANY(%s)`, join)
 	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err := db.Query(sqlstatement)
@@ -191,18 +184,14 @@ func insertRelations(c *gin.Context) {
 		if err != nil {
 			panic(err)
 		}
-		if index := find(values, rawdata.Value); index != -1 {
-			values = append(values[:index], values[index+1:]...)
-		}
 		rawdatas = append(rawdatas, rawdata)
 		rawdataids = append(rawdataids, rawdata.Id)
+		if index := find(values, rawdata.Value); index != -1 {
+			values = slices.Delete(values, index, index+1)
+		}
 	}
 
-	var insertvalues []string
-	for _, v := range values {
-		insertvalues = append(insertvalues, fmt.Sprintf(`('%s')`, v))
-	}
-	sqlstatement = fmt.Sprintf(`INSERT INTO public.rawdata (value) VALUES %s returning id`, strings.Join(insertvalues, ","))
+	sqlstatement = fmt.Sprintf(`INSERT INTO public.rawdata (value) VALUES %s returning id`, joinWithQuotesAndBrackets(values))
 	log.Printf("Executing query: %s\n", sqlstatement)
 	rows, err = db.Query(sqlstatement)
 	log.Printf("Executed query: %s\n", sqlstatement)
@@ -219,30 +208,7 @@ func insertRelations(c *gin.Context) {
 		}
 		rawdataids = append(rawdataids, id)
 	}
-	var ids []string
-	for _, i := range rawdataids {
-		ids = append(ids, strconv.Itoa(int(i)))
-	}
-	join = fmt.Sprintf(`array[%s]`, strings.Join(ids, ","))
-	sqlstatement = fmt.Sprintf(`SELECT * FROM public.rawdata WHERE id = ANY(%s)`, join)
-	log.Printf("Executing query: %s\n", sqlstatement)
-	rows, err = db.Query(sqlstatement)
-	log.Printf("Executed query: %s\n", sqlstatement)
 
-	if err != nil {
-		panic(err)
-	}
-
-	var rawdatafromdb []rawdata
-	//rawdatastoinsert := values
-	for rows.Next() {
-		var rawdata rawdata
-		err = rows.Scan(&rawdata.Id, &rawdata.Value)
-		if err != nil {
-			panic(err)
-		}
-		rawdatafromdb = append(rawdatafromdb, rawdata)
-	}
 	var thingid int64
 	sqlstatement = fmt.Sprintf(`SELECT id FROM public.moneothing WHERE thingid = '%s' AND uniqueidentifier = '%s'`, body.ThingId, body.UniqueIdentifier)
 	log.Printf("Executing query: %s\n", sqlstatement)
@@ -269,19 +235,18 @@ func insertRelations(c *gin.Context) {
 		sqlstatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES`
 		buffer.WriteString(sqlstatement)
 		valuestatement := `('%d', '%d', '%s')`
-		starttime := time.Now().Add(time.Duration(-numberofdatasets) * time.Second)
+		starttime := time.Now().Add(time.Duration(-body.NumberOfDatSets) * time.Second)
 
 		var insertstring []string
-		for _, rd := range rawdatafromdb {
-			insertQuery := fmt.Sprintf(valuestatement, thingid, rd.Id, starttime.Format(time.RFC3339))
+		for i := 0; i < body.NumberOfDatSets; i++ {
+			randomIndex := rand.Intn(len(rawdataids))
+			insertQuery := fmt.Sprintf(valuestatement, thingid, rawdataids[randomIndex], starttime.Format(time.RFC3339))
 			insertstring = append(insertstring, insertQuery)
 			starttime = starttime.Add(time.Second)
 		}
 		buffer.WriteString(strings.Join(insertstring, ","))
-		buffer.WriteString(` returning id`)
-		log.Printf("Executing query: %s\n", buffer.String())
+		///buffer.WriteString(` returning id`)
 		rows, err = db.Query(buffer.String())
-		log.Printf("Executed query: %s\n", buffer.String())
 		if err != nil {
 			panic(err)
 		}
@@ -295,11 +260,12 @@ func insertRelations(c *gin.Context) {
 		}
 	} else {
 		sqlstatement = `INSERT INTO public.moneothingrawdata (thingid, rawdataid, timestamp) VALUES ('%d', '%d', '%s') returning id`
-		starttime := time.Now().Add(time.Duration(-numberofdatasets) * time.Second)
+		starttime := time.Now().Add(time.Duration(-body.NumberOfDatSets) * time.Second)
 
-		for _, rd := range rawdatafromdb {
+		for i := 0; i < body.NumberOfDatSets; i++ {
 			var insertedid int64
-			insertQuery := fmt.Sprintf(sqlstatement, thingid, rd.Id, starttime.Format(time.RFC3339))
+			randomIndex := rand.Intn(len(rawdataids))
+			insertQuery := fmt.Sprintf(sqlstatement, thingid, rawdataids[randomIndex], starttime.Format(time.RFC3339))
 			log.Printf("Executing query: %s\n", insertQuery)
 			starttime = starttime.Add(time.Second)
 			err := db.QueryRow(insertQuery).Scan(&insertedid)
@@ -678,7 +644,7 @@ func main() {
 	boil.SetDB(db)
 
 	//selectMoneoThingsWithRawData(ctx, "380035ab-9190-4c75-a251-fbeb53dc0cb5")
-	insertData(true)
+	insertData(true, 100)
 	//ctx := context.Background()
 	/*db := connectDB()
 
@@ -734,7 +700,7 @@ func main() {
 	router.Run(":4241")
 }
 
-func insertData(bulk bool) {
+func insertData(bulk bool, bulksize int) {
 	context.Background()
 	db, err := sql.Open("postgres", "postgres://richie:0NolonopA0@192.168.66.11:5439/processdata?sslmode=disable")
 	if err != nil {
@@ -833,7 +799,7 @@ func insertData(bulk bool) {
 			insertQuery := fmt.Sprintf(valuestatement, moneothingIds[i%3], rand.Int63n(1000)+1, starttime.Format(time.RFC3339))
 			insertstring = append(insertstring, insertQuery)
 			starttime = starttime.Add(time.Second)
-			if i%10000 == 0 {
+			if i%bulksize == 0 {
 				buffer.WriteString(strings.Join(insertstring, ","))
 				query, err := db.Query(buffer.String())
 				insertstring = nil
@@ -874,4 +840,20 @@ func insertData(bulk bool) {
 func randFloat(min, max float64) float64 {
 	res := min + rand.Float64()*(max-min)
 	return res
+}
+
+func joinWithQuotes(arr []string) string {
+	var quoted []string
+	for _, v := range arr {
+		quoted = append(quoted, fmt.Sprintf("'%s'", v))
+	}
+	return strings.Join(quoted, ",")
+}
+
+func joinWithQuotesAndBrackets(arr []string) string {
+	var quoted []string
+	for _, v := range arr {
+		quoted = append(quoted, fmt.Sprintf("('%s')", v))
+	}
+	return strings.Join(quoted, ",")
 }
