@@ -48,6 +48,23 @@ definitions:
       timestamp:
         type: string
     type: object
+  main.moneothingrawdatatimerangeandvaluedto:
+    properties:
+      fromtime:
+        type: string
+      pagenumber:
+        type: integer
+      pagesize:
+        type: integer
+      thingid:
+        type: string
+      totime:
+        type: string
+      uniqueidentifier:
+        type: string
+      value:
+        type: string
+    type: object
   main.moneothingrawdatatimerangedto:
     properties:
       fromtime:
@@ -254,6 +271,28 @@ paths:
           schema:
             $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
       summary: get values for moneothing in given timerange
+      tags:
+      - moneothingwitrawdatas
+  /moneothingwithrawdatas/timerangevalue:
+    post:
+      consumes:
+      - application/json
+      description: get values for moneothing
+      parameters:
+      - description: Rawdatas for timerange and value
+        in: body
+        name: moneothingrawdatatimerangeandvaluedto
+        required: true
+        schema:
+          $ref: '#/definitions/main.moneothingrawdatatimerangeandvaluedto'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.moneothingwithvaluesviewmodel'
+      summary: get values for moneothing in given timerange and value
       tags:
       - moneothingwitrawdatas
   /moneothingwithrawdatas/timestamp:

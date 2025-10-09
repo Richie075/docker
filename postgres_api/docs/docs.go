@@ -258,6 +258,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/moneothingwithrawdatas/timerangeandvalue": {
+            "post": {
+                "description": "get values for moneothing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "moneothingwitrawdatas"
+                ],
+                "summary": "get values for moneothing in given timerange and given value",
+                "parameters": [
+                    {
+                        "description": "Rawdatas for timerange and value",
+                        "name": "moneothingrawdatatimerangeandvaluedto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.moneothingrawdatatimerangeandvaluedto"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.moneothingwithvaluesviewmodel"
+                        }
+                    }
+                }
+            }
+        },
         "/moneothingwithrawdatas/timestamp": {
             "post": {
                 "description": "get values for moneothing",
@@ -402,6 +436,32 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.moneothingrawdatatimerangeandvaluedto": {
+            "type": "object",
+            "properties": {
+                "fromtime": {
+                    "type": "string"
+                },
+                "pagenumber": {
+                    "type": "integer"
+                },
+                "pagesize": {
+                    "type": "integer"
+                },
+                "thingid": {
+                    "type": "string"
+                },
+                "totime": {
+                    "type": "string"
+                },
+                "uniqueidentifier": {
+                    "type": "string"
+                },
+                "value": {
                     "type": "string"
                 }
             }

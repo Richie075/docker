@@ -141,6 +141,16 @@ type insertrelationdto struct {
 	BulkInsert       bool      `json:"bulkinsert"`
 }
 
+type moneothingrawdatatimerangeandvaluedto struct {
+	ThingId          uuid.UUID `json:"thingid"`
+	UniqueIdentifier string    `json:"uniqueidentifier"`
+	FromTime         time.Time `json:"fromtime"`
+	ToTime           time.Time `json:"totime"`
+	PageNumber       int       `json:"pagenumber"`
+	PageSize         int       `json:"pagesize"`
+	Value            string    `json:"value"`
+}
+
 // Insert godoc
 // @Summary      Insert data
 // @Description  Insert data
@@ -541,6 +551,55 @@ func getMoneoThingRawDataByTimeRange(c *gin.Context) {
 	log.Printf("----> Finished getMoneoThingRawDataByTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
 }
 
+// Get values for moneothing godoc
+// @Summary      get values for moneothing in given timerange and value
+// @Description  get values for moneothing
+// @Tags         moneothingwitrawdatas
+// @Accept       json
+// @Produce      json
+// @Param		 moneothingrawdatatimerangeandvaluedto	body		moneothingrawdatatimerangeandvaluedto	true	"Rawdatas for timerange and value"
+// @Success      200  {object}  moneothingwithvaluesviewmodel
+// @Router       /moneothingwithrawdatas/timerangevalue [post]
+func getMoneoThingRawDataByTimeRangeAndValue(c *gin.Context) {
+	var body moneothingrawdatatimerangeandvaluedto
+	if err := c.BindJSON(&body); err != nil {
+		log.Println(err)
+	}
+	now := time.Now()
+	log.Printf("----> Starting getMoneoThingRawDataByTimeRange at: %s\n", now.Format(time.DateTime))
+	db, err := connectDB()
+	if err != nil {
+		panic(err)
+	}
+
+	var moneothingwithvaluesviewmodel moneothingwithvaluesviewmodel
+	var valuewithtimestampviewmodels []valuewithtimestampviewmodel
+
+	sqlstatement := fmt.Sprintf(`SELECT * FROM processdata.moneothingwithrawdata WHERE thingid = '%s' AND uniqueidentifier = '%s' AND value like '%s' AND timestamp >= toDateTime('%s') AND timestamp <= toDateTime('%s') ORDER BY timestamp OFFSET %d ROWS FETCH NEXT %d ROWS ONLY`, body.ThingId, body.UniqueIdentifier, body.Value, body.FromTime.Format(time.DateTime), body.ToTime.Format(time.DateTime), body.PageNumber*body.PageSize, body.PageSize)
+	log.Printf("Executing query: %s\n", sqlstatement)
+	rows, err := db.Query(context.Background(), sqlstatement)
+	log.Printf("Executed query: %s\n", sqlstatement)
+
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		var valuewithtimestampviewmodel valuewithtimestampviewmodel
+		err = rows.Scan(&moneothingwithvaluesviewmodel.ThingId, &moneothingwithvaluesviewmodel.UniqueIdentifier, &moneothingwithvaluesviewmodel.DisplayName, &valuewithtimestampviewmodel.Value, &valuewithtimestampviewmodel.TimeStamp)
+		if err != nil {
+			panic(err)
+		}
+		valuewithtimestampviewmodels = append(valuewithtimestampviewmodels, valuewithtimestampviewmodel)
+	}
+	rows.Close()
+
+	moneothingwithvaluesviewmodel.Rawdatas = valuewithtimestampviewmodels
+	c.IndentedJSON(http.StatusCreated, moneothingwithvaluesviewmodel)
+	after := time.Now()
+	dur := after.Sub(now)
+	log.Printf("----> Finished getMoneoThingRawDataByTimeRange at: %s, Duration: %d ms\n", after.Format(time.RFC3339), dur.Milliseconds())
+}
+
 func connectDB() (driver.Conn, error) {
 	var (
 		ctx       = context.Background()
@@ -626,6 +685,7 @@ func main() {
 			moneothingrawdatas.POST("value", getMoneoThingByValue)
 			moneothingrawdatas.POST("timestamp", getMoneoThingRawDataByTimeStamp)
 			moneothingrawdatas.POST("timerange", getMoneoThingRawDataByTimeRange)
+			moneothingrawdatas.POST("timerangevalue", getMoneoThingRawDataByTimeRangeAndValue)
 
 			moneothingrawdatas.POST("insert", insertRelations)
 		}
